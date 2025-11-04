@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'recorrencia_list' %}" class="text-green-600 hover:text-green-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para lista
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">{{ title }}</h1>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <form method="post" @submit="if(!confirm('Deseja salvar esta recorrência?')) { event.preventDefault(); }">
+        {% csrf_token %}
+        
+        <!-- Informações Básicas -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-info-circle text-blue-500"></i> Informações Básicas
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="id_cliente" class="block text-sm font-medium text-gray-700 mb-2">
+                        Cliente *
+                    </label>
+                    {{ form.cliente }}
+                    {% if form.cliente.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.cliente.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> O cliente precisa estar sincronizado com o Asaas
+                    </p>
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="id_description" class="block text-sm font-medium text-gray-700 mb-2">
+                        Descrição *
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Valores e Pagamento -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-dollar-sign text-green-500"></i> Valores e Pagamento
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="id_value" class="block text-sm font-medium text-gray-700 mb-2">
+                        Valor *
+                    </label>
+                    {{ form.value }}
+                    {% if form.value.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.value.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="id_billing_type" class="block text-sm font-medium text-gray-700 mb-2">
+                        Forma de Pagamento *
+                    </label>
+                    {{ form.billing_type }}
+                    {% if form.billing_type.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.billing_type.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Boleto:</strong> Cliente recebe boleto por e-mail | 
+                        <strong>Pix:</strong> QR Code automático | 
+                        <strong>Cartão:</strong> Cobrança automática | 
+                        <strong>Perguntar:</strong> Cliente escolhe
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recorrência -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-repeat text-purple-500"></i> Configurações de Recorrência
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="id_cycle" class="block text-sm font-medium text-gray-700 mb-2">
+                        Ciclo de Cobrança *
+                    </label>
+                    {{ form.cycle }}
+                    {% if form.cycle.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.cycle.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="id_max_payments" class="block text-sm font-medium text-gray-700 mb-2">
+                        Número Máximo de Cobranças
+                    </label>
+                    {{ form.max_payments }}
+                    {% if form.max_payments.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.max_payments.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Deixe em branco para cobranças ilimitadas
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="id_next_due_date" class="block text-sm font-medium text-gray-700 mb-2">
+                        Próximo Vencimento *
+                    </label>
+                    {{ form.next_due_date }}
+                    {% if form.next_due_date.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.next_due_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="id_end_date" class="block text-sm font-medium text-gray-700 mb-2">
+                        Data de Término
+                    </label>
+                    {{ form.end_date }}
+                    {% if form.end_date.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.end_date.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Deixe em branco para sem data de término
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'recorrencia_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <i class="fas fa-times mr-2"></i> Cancelar
+            </a>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <i class="fas fa-save mr-2"></i> Salvar
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+                <strong>Importante:</strong> A recorrência será automaticamente sincronizada com a API do Asaas ao salvar. Certifique-se de que o cliente está sincronizado.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

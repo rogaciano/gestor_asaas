@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Conciliação - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Conciliação Manual</h1>
+    <p class="mt-2 text-gray-600">Categorize rapidamente movimentações pendentes</p>
+</div>
+
+<div class="mb-6 flex justify-between items-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <div>
+        <h3 class="text-sm font-medium text-blue-800">
+            <i class="fas fa-info-circle"></i> Pendências
+        </h3>
+        <p class="text-sm text-blue-700">{{ total }} movimentação(ões) aguardando conciliação</p>
+    </div>
+    <a href="{% url 'aplicar_regras_manual' %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <i class="fas fa-magic mr-2"></i> Aplicar Regras Automáticas
+    </a>
+</div>
+
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    {% for mov in movimentacoes %}
+    <div class="border-b border-gray-200 last:border-b-0">
+        <div class="p-6" x-data="{ selectedCategoria: null }">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-sm text-gray-500">{{ mov.data|date:"d/m/Y" }}</span>
+                        <span class="px-2 py-1 text-xs rounded {% if mov.valor >= 0 %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                            R$ {{ mov.valor|floatformat:2 }}
+                        </span>
+                        <span class="text-xs text-gray-500">
+                            {{ mov.get_tipo_display }}
+                        </span>
+                    </div>
+                    <p class="text-lg font-medium text-gray-900 mb-1">{{ mov.descricao }}</p>
+                    {% if mov.cliente %}
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-user mr-1"></i> {{ mov.cliente.name }}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <div class="ml-6 flex gap-3">
+                    <form method="post" action="{% url 'conciliar_rapido' mov.pk %}" class="flex gap-2">
+                        {% csrf_token %}
+                        <select name="categoria_id" required
+                                class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="">Selecione a categoria...</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.id }}">
+                                {% if cat.tipo == 'RECEITA' %}✓{% else %}✗{% endif %} {{ cat.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm whitespace-nowrap">
+                            <i class="fas fa-check mr-1"></i> Conciliar
+                        </button>
+                    </form>
+                    
+                    <a href="{% url 'movimentacao_edit' mov.pk %}"
+                       class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="p-8 text-center text-gray-500">
+        <i class="fas fa-check-circle text-4xl text-green-500 mb-2"></i>
+        <p class="text-lg font-medium">Parabéns! Tudo conciliado!</p>
+        <p class="mt-2">Não há movimentações pendentes.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// Submissão via AJAX para conciliação rápida
+document.querySelectorAll('form[action*="conciliar_rapido"]').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const actionUrl = this.action;
+        
+        fetch(actionUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove o item da lista
+                this.closest('.border-b').remove();
+                
+                // Atualiza contador
+                const total = parseInt(document.querySelector('.text-blue-700').textContent);
+                document.querySelector('.text-blue-700').textContent = 
+                    `${total - 1} movimentação(ões) aguardando conciliação`;
+                
+                // Se não houver mais itens, recarrega a página
+                if (document.querySelectorAll('.border-b').length === 0) {
+                    location.reload();
+                }
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao conciliar. Tente novamente.');
+        });
+    });
+});
+</script>
+{% endblock %}
+

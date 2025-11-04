@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Movimentação - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Editar / Conciliar Movimentação</h1>
+    <p class="mt-2 text-gray-600">Edite os dados ou categorize manualmente</p>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="id_data" class="block text-sm font-medium text-gray-700 mb-2">Data</label>
+                {{ form.data }}
+            </div>
+
+            <div>
+                <label for="id_tipo" class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                {{ form.tipo }}
+            </div>
+
+            <div class="md:col-span-2">
+                <label for="id_descricao" class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                {{ form.descricao }}
+            </div>
+
+            <div>
+                <label for="id_valor" class="block text-sm font-medium text-gray-700 mb-2">Valor</label>
+                {{ form.valor }}
+            </div>
+
+            <div>
+                <label for="id_cliente" class="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                {{ form.cliente }}
+            </div>
+
+            <div>
+                <label for="id_plano_contas" class="block text-sm font-medium text-gray-700 mb-2">
+                    Categoria <span class="text-blue-600">(Conciliar)</span>
+                </label>
+                {{ form.plano_contas }}
+            </div>
+
+            <div>
+                <label for="id_status_conciliacao" class="block text-sm font-medium text-gray-700 mb-2">Status de Conciliação</label>
+                {{ form.status_conciliacao }}
+            </div>
+
+            <div class="md:col-span-2">
+                <label for="id_observacoes_conciliacao" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                {{ form.observacoes_conciliacao }}
+            </div>
+        </div>
+
+        <!-- Info do Asaas -->
+        {% if movimentacao.synced_with_asaas %}
+        <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 class="text-sm font-medium text-blue-800 mb-2">
+                <i class="fas fa-info-circle"></i> Sincronizado com Asaas
+            </h3>
+            <p class="text-sm text-blue-700">ID: {{ movimentacao.asaas_id }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Botões -->
+        <div class="mt-8 flex justify-end gap-4">
+            <a href="{% url 'movimentacao_list' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Cancelar
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-save mr-2"></i> Salvar
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

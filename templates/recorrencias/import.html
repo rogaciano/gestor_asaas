@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Recorrências - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'recorrencia_list' %}" class="text-green-600 hover:text-green-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para lista
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">Importar Recorrências do Asaas</h1>
+    <p class="mt-2 text-gray-600">Sincronize suas recorrências cadastradas no Asaas com o sistema local</p>
+</div>
+
+<div class="max-w-3xl">
+    <!-- Info Card -->
+    <div class="bg-green-50 border-l-4 border-green-400 p-6 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-green-400 text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-medium text-green-900 mb-2">Como funciona a importação?</h3>
+                <ul class="text-sm text-green-700 space-y-2">
+                    <li><i class="fas fa-check mr-2"></i> Busca todas as recorrências cadastradas na sua conta Asaas</li>
+                    <li><i class="fas fa-check mr-2"></i> Recorrências novas serão importadas automaticamente</li>
+                    <li><i class="fas fa-check mr-2"></i> Recorrências já existentes serão atualizadas</li>
+                    <li><i class="fas fa-check mr-2"></i> Clientes vinculados são importados automaticamente se necessário</li>
+                    <li><i class="fas fa-check mr-2"></i> Máximo de 100 recorrências por importação</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="bg-white shadow rounded-lg p-8">
+        <div class="text-center mb-6">
+            <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 mb-4">
+                <i class="fas fa-cloud-download-alt text-green-600 text-4xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Importar Recorrências</h2>
+            <p class="text-gray-600">
+                Todas as assinaturas da sua conta Asaas serão sincronizadas
+            </p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Importante:</h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>A importação pode levar alguns segundos</li>
+                                <li>Não feche esta página durante o processo</li>
+                                <li>Dados existentes serão atualizados, não duplicados</li>
+                                <li>Clientes associados serão importados automaticamente</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center space-x-4">
+                <a href="{% url 'recorrencia_list' %}" class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-md shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <i class="fas fa-times mr-2"></i> Cancelar
+                </a>
+                <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700">
+                    <i class="fas fa-download mr-2"></i> Iniciar Importação
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Stats Card -->
+    <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">
+            <i class="fas fa-chart-bar mr-2"></i> Estatísticas Atuais
+        </h3>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-white p-4 rounded-lg">
+                <div class="text-sm text-gray-500 mb-1">Recorrências Locais</div>
+                <div class="text-2xl font-bold text-gray-900">{{ recorrencias_locais|default:0 }}</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg">
+                <div class="text-sm text-gray-500 mb-1">Sincronizadas</div>
+                <div class="text-2xl font-bold text-green-600">{{ recorrencias_sincronizadas|default:0 }}</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg">
+                <div class="text-sm text-gray-500 mb-1">Ativas</div>
+                <div class="text-2xl font-bold text-blue-600">{{ recorrencias_ativas|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

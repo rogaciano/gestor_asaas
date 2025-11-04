@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'cliente_list' %}" class="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para lista
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">{{ title }}</h1>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <form method="post" x-data="{ cpfCnpj: '', isCompany: false }" @submit="if(!confirm('Deseja salvar este cliente?')) { event.preventDefault(); }">
+        {% csrf_token %}
+        
+        <!-- Dados Principais -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-user text-blue-500"></i> Dados Principais
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="id_name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nome Completo *
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="id_cpfCnpj" class="block text-sm font-medium text-gray-700 mb-2">
+                        CPF/CNPJ *
+                    </label>
+                    {{ form.cpfCnpj }}
+                    {% if form.cpfCnpj.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.cpfCnpj.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="id_email" class="block text-sm font-medium text-gray-700 mb-2">
+                        E-mail *
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contato -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-phone text-green-500"></i> Contato
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="id_phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Telefone
+                    </label>
+                    {{ form.phone }}
+                </div>
+                
+                <div>
+                    <label for="id_mobilePhone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Celular
+                    </label>
+                    {{ form.mobilePhone }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Endereço -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-map-marker-alt text-red-500"></i> Endereço
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="id_address" class="block text-sm font-medium text-gray-700 mb-2">
+                        Endereço
+                    </label>
+                    {{ form.address }}
+                </div>
+                
+                <div>
+                    <label for="id_addressNumber" class="block text-sm font-medium text-gray-700 mb-2">
+                        Número
+                    </label>
+                    {{ form.addressNumber }}
+                </div>
+                
+                <div>
+                    <label for="id_complement" class="block text-sm font-medium text-gray-700 mb-2">
+                        Complemento
+                    </label>
+                    {{ form.complement }}
+                </div>
+                
+                <div>
+                    <label for="id_province" class="block text-sm font-medium text-gray-700 mb-2">
+                        Bairro
+                    </label>
+                    {{ form.province }}
+                </div>
+                
+                <div>
+                    <label for="id_postalCode" class="block text-sm font-medium text-gray-700 mb-2">
+                        CEP
+                    </label>
+                    {{ form.postalCode }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Observações -->
+        <div class="pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-sticky-note text-yellow-500"></i> Observações
+            </h2>
+            <div>
+                <label for="id_observations" class="block text-sm font-medium text-gray-700 mb-2">
+                    Notas e Informações Adicionais
+                </label>
+                {{ form.observations }}
+                <p class="mt-1 text-sm text-gray-500">
+                    Adicione notas importantes sobre o cliente (histórico, preferências, etc.)
+                </p>
+            </div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'cliente_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-times mr-2"></i> Cancelar
+            </a>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-save mr-2"></i> Salvar
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+                <strong>Importante:</strong> Os dados do cliente serão automaticamente sincronizados com a API do Asaas ao salvar.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

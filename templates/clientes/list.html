@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Clientes - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-center">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">Clientes</h1>
+        <p class="mt-2 text-gray-600">Gerencie seus clientes cadastrados</p>
+    </div>
+    <div class="flex space-x-3">
+        <a href="{% url 'import_clientes' %}"
+            class="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <i class="fas fa-cloud-download-alt mr-2"></i> Importar do Asaas
+        </a>
+        <a href="{% url 'cliente_create' %}"
+            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <i class="fas fa-plus mr-2"></i> Novo Cliente
+        </a>
+    </div>
+</div>
+
+<!-- Filtros e Pesquisa -->
+<div class="mb-6 bg-white shadow rounded-lg p-6" x-data="{ showFilters: false }">
+    <form method="get" action="{% url 'cliente_list' %}" class="space-y-4">
+        <!-- Barra de Pesquisa -->
+        <div class="flex gap-4">
+            <div class="flex-1">
+                <div class="relative">
+                    <input type="text" name="search" value="{{ search_query }}"
+                        placeholder="Pesquisar por nome, email ou CPF/CNPJ..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+            <button type="button" @click="showFilters = !showFilters"
+                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-filter mr-2"></i> Filtros
+                <i class="fas fa-chevron-down ml-2" :class="{ 'rotate-180': showFilters }"></i>
+            </button>
+            <button type="submit"
+                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-search mr-2"></i> Buscar
+            </button>
+            {% if search_query or tipo_pessoa or sync_status %}
+            <a href="{% url 'cliente_list' %}"
+                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-times mr-2"></i> Limpar
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Filtros Avançados -->
+        <div x-show="showFilters" x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 transform -translate-y-2"
+            x-transition:enter-end="opacity-100 transform translate-y-0"
+            class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+
+            <!-- Tipo de Pessoa -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-id-card mr-1"></i> Tipo de Pessoa
+                </label>
+                <select name="tipo_pessoa"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Todos</option>
+                    <option value="fisica" {% if tipo_pessoa == 'fisica' %}selected{% endif %}>Pessoa Física</option>
+                    <option value="juridica" {% if tipo_pessoa == 'juridica' %}selected{% endif %}>Pessoa Jurídica
+                    </option>
+                </select>
+            </div>
+
+            <!-- Status de Sincronização -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-sync mr-1"></i> Sincronização
+                </label>
+                <select name="sync_status"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Todos</option>
+                    <option value="synced" {% if sync_status == 'synced' %}selected{% endif %}>Sincronizados</option>
+                    <option value="not_synced" {% if sync_status == 'not_synced' %}selected{% endif %}>Não Sincronizados
+                    </option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if clientes %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cliente
+                </th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CPF/CNPJ
+                </th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    E-mail
+                </th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Telefone
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for cliente in clientes %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-blue-600"></i>
+                        </div>
+                        <div class="ml-4 max-w-xs">
+                            <div class="text-sm font-medium text-gray-900 break-words">{{ cliente.name }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ cliente.cpfCnpj }}</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ cliente.email }}</div>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ cliente.mobilePhone|default:cliente.phone|default:"-" }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if cliente.synced_with_asaas %}
+                    <span
+                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        <i class="fas fa-check-circle mr-1"></i> Sincronizado
+                    </span>
+                    {% else %}
+                    <span
+                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        <i class="fas fa-exclamation-circle mr-1"></i> Não sincronizado
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex items-center justify-end space-x-3">
+                        <a href="{% url 'cliente_edit' cliente.pk %}" class="text-blue-600 hover:text-blue-900"
+                            title="Editar">
+                            <i class="fas fa-edit text-lg"></i>
+                        </a>
+                        <a href="{% url 'cliente_sync' cliente.pk %}" class="text-green-600 hover:text-green-900"
+                            title="Sincronizar">
+                            <i class="fas fa-sync text-lg"></i>
+                        </a>
+                        <a href="{% url 'cliente_delete' cliente.pk %}" class="text-red-600 hover:text-red-900"
+                            title="Excluir">
+                            <i class="fas fa-trash text-lg"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white shadow rounded-lg p-12 text-center">
+    <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum cliente cadastrado</h3>
+    <p class="text-gray-500 mb-6">Comece cadastrando seu primeiro cliente</p>
+    <a href="{% url 'cliente_create' %}"
+        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+        <i class="fas fa-plus mr-2"></i> Cadastrar Cliente
+    </a>
+</div>
+{% endif %}
+{% endblock %}

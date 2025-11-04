@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <p class="mt-2 text-gray-600">Visão geral do sistema de gestão</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <!-- Total Clientes -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-users text-4xl text-blue-500"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">Total de Clientes</dt>
+                        <dd class="text-3xl font-semibold text-gray-900">{{ total_clientes }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+            <a href="{% url 'cliente_list' %}" class="text-sm text-blue-600 hover:text-blue-900">
+                Ver todos <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Total Recorrências -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-repeat text-4xl text-green-500"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">Total de Recorrências</dt>
+                        <dd class="text-3xl font-semibold text-gray-900">{{ total_recorrencias }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+            <a href="{% url 'recorrencia_list' %}" class="text-sm text-green-600 hover:text-green-900">
+                Ver todas <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recorrências Ativas -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-4xl text-purple-500"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">Recorrências Ativas</dt>
+                        <dd class="text-3xl font-semibold text-gray-900">{{ recorrencias_ativas }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+            <div class="text-sm text-gray-600">
+                Status: Ativo
+            </div>
+        </div>
+    </div>
+
+    <!-- Clientes Sincronizados -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-sync text-4xl text-yellow-500"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">Clientes Sincronizados</dt>
+                        <dd class="text-3xl font-semibold text-gray-900">{{ clientes_sincronizados }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+            <div class="text-sm text-gray-600">
+                Sincronizados com Asaas
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">
+        <i class="fas fa-bolt text-yellow-500"></i> Ações Rápidas
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="{% url 'cliente_create' %}" class="flex items-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition duration-150 border border-blue-200">
+            <div class="flex-shrink-0">
+                <i class="fas fa-user-plus text-3xl text-blue-600"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-medium text-blue-900">Novo Cliente</h3>
+                <p class="text-sm text-blue-700">Cadastre um novo cliente</p>
+            </div>
+        </a>
+        
+        <a href="{% url 'recorrencia_create' %}" class="flex items-center p-4 bg-green-50 hover:bg-green-100 rounded-lg transition duration-150 border border-green-200">
+            <div class="flex-shrink-0">
+                <i class="fas fa-plus-circle text-3xl text-green-600"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-medium text-green-900">Nova Recorrência</h3>
+                <p class="text-sm text-green-700">Crie uma nova assinatura</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Information -->
+<div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-info-circle text-blue-400 text-xl"></i>
+        </div>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800">Sobre o Sistema</h3>
+            <div class="mt-2 text-sm text-blue-700">
+                <p>Este sistema permite gerenciar clientes e recorrências (assinaturas) integrado com a API do Asaas.</p>
+                <p class="mt-1">Configure sua chave de API no arquivo .env para sincronização automática.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

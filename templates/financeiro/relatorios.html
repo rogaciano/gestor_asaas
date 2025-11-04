@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatórios Financeiros - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Relatórios Financeiros</h1>
+    <p class="mt-2 text-gray-600">Análise detalhada das suas finanças</p>
+</div>
+
+<!-- Filtro de Período -->
+<div class="mb-6 bg-white shadow rounded-lg p-6">
+    <form method="get" class="flex gap-4 items-end">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Data Início</label>
+            <input type="date" name="data_inicio" value="{{ data_inicio }}"
+                   class="px-4 py-2 border border-gray-300 rounded-lg">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Data Fim</label>
+            <input type="date" name="data_fim" value="{{ data_fim }}"
+                   class="px-4 py-2 border border-gray-300 rounded-lg">
+        </div>
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <i class="fas fa-search mr-2"></i> Atualizar
+        </button>
+    </form>
+</div>
+
+<!-- Cards de Resumo -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-green-100 text-sm">Total Receitas</p>
+                <p class="text-3xl font-bold mt-1">R$ {{ total_receitas|floatformat:2 }}</p>
+            </div>
+            <div class="text-4xl opacity-50">
+                <i class="fas fa-arrow-up"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-red-100 text-sm">Total Despesas</p>
+                <p class="text-3xl font-bold mt-1">R$ {{ total_despesas|floatformat:2 }}</p>
+            </div>
+            <div class="text-4xl opacity-50">
+                <i class="fas fa-arrow-down"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-gradient-to-br {% if saldo >= 0 %}from-blue-500 to-blue-600{% else %}from-orange-500 to-orange-600{% endif %} text-white shadow rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="{% if saldo >= 0 %}text-blue-100{% else %}text-orange-100{% endif %} text-sm">Saldo do Período</p>
+                <p class="text-3xl font-bold mt-1">R$ {{ saldo|floatformat:2 }}</p>
+            </div>
+            <div class="text-4xl opacity-50">
+                <i class="fas fa-wallet"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos e Tabelas -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <!-- Por Categoria -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-chart-pie mr-2"></i> Por Categoria
+        </h2>
+        <div class="space-y-3">
+            {% for item in por_categoria|slice:":10" %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-gray-700">
+                        {% if item.plano_contas__tipo == 'RECEITA' %}
+                        <i class="fas fa-arrow-up text-green-600 text-xs"></i>
+                        {% else %}
+                        <i class="fas fa-arrow-down text-red-600 text-xs"></i>
+                        {% endif %}
+                        {{ item.plano_contas__nome }}
+                    </span>
+                    <span class="font-medium text-gray-900">R$ {{ item.total|floatformat:2 }}</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="{% if item.plano_contas__tipo == 'RECEITA' %}bg-green-600{% else %}bg-red-600{% endif %} h-2 rounded-full"
+                         style="width: {% widthratio item.total total_receitas 100 %}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">{{ item.quantidade }} transações</p>
+            </div>
+            {% empty %}
+            <p class="text-gray-500 text-center py-4">Nenhum dado disponível</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Status de Conciliação -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-check-circle mr-2"></i> Status de Conciliação
+        </h2>
+        <div class="space-y-4">
+            <div class="flex justify-between items-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div>
+                    <p class="text-sm text-yellow-700">Não Conciliadas</p>
+                    <p class="text-2xl font-bold text-yellow-900">{{ conciliacao_stats.nao_conciliado }}</p>
+                </div>
+                <i class="fas fa-exclamation-circle text-3xl text-yellow-500"></i>
+            </div>
+            <div class="flex justify-between items-center p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div>
+                    <p class="text-sm text-green-700">Conciliadas Automaticamente</p>
+                    <p class="text-2xl font-bold text-green-900">{{ conciliacao_stats.conciliado_auto }}</p>
+                </div>
+                <i class="fas fa-magic text-3xl text-green-500"></i>
+            </div>
+            <div class="flex justify-between items-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div>
+                    <p class="text-sm text-blue-700">Conciliadas Manualmente</p>
+                    <p class="text-2xl font-bold text-blue-900">{{ conciliacao_stats.conciliado_manual }}</p>
+                </div>
+                <i class="fas fa-user-check text-3xl text-blue-500"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Evolução Mensal -->
+<div class="bg-white shadow rounded-lg p-6 mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+        <i class="fas fa-chart-line mr-2"></i> Evolução Mensal
+    </h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 text-sm font-medium text-gray-700">Mês</th>
+                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-700">Receitas</th>
+                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-700">Despesas</th>
+                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-700">Saldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in por_mes %}
+                {% with saldo_mes=item.receitas|add:item.despesas %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4 text-sm text-gray-900">{{ item.mes|date:"m/Y" }}</td>
+                    <td class="py-3 px-4 text-sm text-green-600 text-right font-medium">
+                        R$ {{ item.receitas|default:0|floatformat:2 }}
+                    </td>
+                    <td class="py-3 px-4 text-sm text-red-600 text-right font-medium">
+                        R$ {{ item.despesas|default:0|floatformat:2 }}
+                    </td>
+                    <td class="py-3 px-4 text-sm text-right font-bold {% if saldo_mes >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        R$ {{ saldo_mes|floatformat:2 }}
+                    </td>
+                </tr>
+                {% endwith %}
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="py-8 text-center text-gray-500">Nenhum dado disponível</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Top Clientes -->
+<div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+        <i class="fas fa-trophy mr-2"></i> Top 10 Clientes
+    </h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 text-sm font-medium text-gray-700">#</th>
+                    <th class="text-left py-3 px-4 text-sm font-medium text-gray-700">Cliente</th>
+                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-700">Transações</th>
+                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-700">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in top_clientes %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4 text-sm text-gray-500">{{ forloop.counter }}º</td>
+                    <td class="py-3 px-4 text-sm text-gray-900">{{ item.cliente__name }}</td>
+                    <td class="py-3 px-4 text-sm text-gray-700 text-right">{{ item.quantidade }}</td>
+                    <td class="py-3 px-4 text-sm text-green-600 text-right font-medium">
+                        R$ {{ item.total|floatformat:2 }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="py-8 text-center text-gray-500">Nenhum dado disponível</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

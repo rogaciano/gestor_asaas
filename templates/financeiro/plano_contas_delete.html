@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Deletar Categoria - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Deletar Categoria</h1>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="mb-6">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Atenção!</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>Você está prestes a deletar a categoria:</p>
+                        <p class="mt-2 font-semibold">{{ categoria.codigo }} - {{ categoria.nome }}</p>
+                        <p class="mt-2">Esta ação não pode ser desfeita.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'plano_contas_list' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Cancelar
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                <i class="fas fa-trash mr-2"></i> Sim, Deletar
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

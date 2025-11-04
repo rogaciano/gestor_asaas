@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Asaas - Gestão de Clientes e Recorrências{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Alpine.js Mask Plugin -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/mask@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <a href="{% url 'home' %}" class="text-2xl font-bold text-blue-600">
+                            <i class="fas fa-chart-line"></i> Asaas Manager
+                        </a>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            <i class="fas fa-home mr-2"></i> Home
+                        </a>
+                        <a href="{% url 'cliente_list' %}" class="{% if 'cliente' in request.path %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            <i class="fas fa-users mr-2"></i> Clientes
+                        </a>
+                        <a href="{% url 'recorrencia_list' %}" class="{% if 'recorrencia' in request.path %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            <i class="fas fa-repeat mr-2"></i> Recorrências
+                        </a>
+                        
+                        <!-- Financeiro Dropdown -->
+                        <div class="relative flex" x-data="{ openFinanceiro: false }">
+                            <button @click="openFinanceiro = !openFinanceiro" class="{% if 'financeiro' in request.path %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                <i class="fas fa-dollar-sign mr-2"></i> Financeiro
+                                <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                            </button>
+                            <div x-show="openFinanceiro" @click.away="openFinanceiro = false" x-transition class="origin-top-left absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="py-1">
+                                    <a href="{% url 'relatorios' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-chart-bar mr-2 text-blue-600"></i> Relatórios
+                                    </a>
+                                    <a href="{% url 'movimentacao_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-exchange-alt mr-2 text-green-600"></i> Movimentações
+                                    </a>
+                                    <a href="{% url 'conciliacao' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-check-circle mr-2 text-purple-600"></i> Conciliação
+                                    </a>
+                                    <div class="border-t border-gray-100"></div>
+                                    <a href="{% url 'plano_contas_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-sitemap mr-2 text-orange-600"></i> Plano de Contas
+                                    </a>
+                                    <a href="{% url 'regra_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-magic mr-2 text-indigo-600"></i> Regras Automáticas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- User Menu -->
+                <div class="flex items-center" x-data="{ open: false }">
+                    <div class="relative">
+                        <button @click="open = !open" class="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900 focus:outline-none">
+                            <div class="flex items-center">
+                                <div class="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center mr-2">
+                                    <i class="fas fa-user text-white text-sm"></i>
+                                </div>
+                                <span>{{ user.username }}</span>
+                                <i class="fas fa-chevron-down ml-2"></i>
+                            </div>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-transition class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                            <div class="py-1">
+                                <div class="px-4 py-2 text-xs text-gray-500 border-b">
+                                    <i class="fas fa-shield-alt mr-1"></i> Logado como:
+                                    <div class="font-semibold text-gray-900">{{ user.username }}</div>
+                                </div>
+                                <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-700 hover:bg-red-50">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Sair
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4" x-data="{ show: true }">
+        {% for message in messages %}
+        <div x-show="show" x-transition class="{% if message.tags == 'success' %}bg-green-100 border-green-400 text-green-700{% elif message.tags == 'error' %}bg-red-100 border-red-400 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 border-yellow-400 text-yellow-700{% else %}bg-blue-100 border-blue-400 text-blue-700{% endif %} px-4 py-3 rounded relative mb-4 border" role="alert">
+            <span class="block sm:inline">{{ message }}</span>
+            <button @click="show = false" class="absolute top-0 bottom-0 right-0 px-4 py-3">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <p class="text-center text-gray-500 text-sm">
+                &copy; 2025 Asaas Manager - Sistema de Gestão de Clientes e Recorrências
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
+
