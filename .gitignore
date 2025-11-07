@@ -29,14 +29,22 @@ db.sqlite3-journal
 /media
 /staticfiles
 
-# Environment
+# Environment - Arquivos sensíveis NUNCA devem ser commitados
 .env
+.env.local
+.env.production
+.env.staging
+.env.*.local
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Configurações específicas do servidor (não sobrescrever)
+# Mantenha .env.example e .env.production.example para referência
+# Mas nunca commite .env real
 
 # IDE
 .vscode/
@@ -48,4 +56,10 @@ venv.bak/
 # OS
 .DS_Store
 Thumbs.db
+
+# Arquivos temporários e de backup
+*.bak
+*.backup
+*.tmp
+*~
 
