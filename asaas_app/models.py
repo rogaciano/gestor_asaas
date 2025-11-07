@@ -256,3 +256,64 @@ class RegraCategorizacao(models.Model):
         
         return False
 
+
+class LinkPagamento(models.Model):
+    """Modelo para armazenar links de pagamento do Asaas"""
+    
+    CHARGE_TYPE_CHOICES = [
+        ('DETACHED', 'Avulso (valor fixo)'),
+        ('INSTALLMENT', 'Parcelado'),
+        ('RECURRENT', 'Recorrente (assinatura)'),
+    ]
+    
+    BILLING_TYPE_CHOICES = [
+        ('BOLETO', 'Boleto Bancário'),
+        ('CREDIT_CARD', 'Cartão de Crédito'),
+        ('PIX', 'Pix'),
+        ('UNDEFINED', 'Perguntar ao Cliente'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Ativo'),
+        ('INACTIVE', 'Inativo'),
+        ('EXPIRED', 'Expirado'),
+    ]
+    
+    # Dados básicos
+    nome = models.CharField('Nome', max_length=255)
+    descricao = models.TextField('Descrição', blank=True, null=True)
+    valor = models.DecimalField('Valor', max_digits=10, decimal_places=2, blank=True, null=True, 
+                                help_text='Deixe em branco para permitir valor livre')
+    billing_type = models.CharField('Forma de Pagamento', max_length=20, choices=BILLING_TYPE_CHOICES, 
+                                    default='UNDEFINED')
+    charge_type = models.CharField('Tipo de Cobrança', max_length=20, choices=CHARGE_TYPE_CHOICES, 
+                                    default='DETACHED')
+    
+    # Configurações opcionais
+    due_date_limit_days = models.IntegerField('Prazo de Vencimento (dias)', blank=True, null=True, 
+                                              help_text='Quantos dias após o acesso o link expira')
+    max_installments = models.IntegerField('Máximo de Parcelas', blank=True, null=True, 
+                                          help_text='Apenas para cobrança parcelada')
+    
+    # Relacionamento com cliente (opcional)
+    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, 
+                               related_name='links_pagamento', verbose_name='Cliente')
+    
+    # Dados do Asaas
+    asaas_id = models.CharField('ID Asaas', max_length=50, blank=True, null=True, unique=True)
+    url = models.URLField('URL do Link', max_length=500, blank=True, null=True, 
+                         help_text='Link público para compartilhar')
+    status = models.CharField('Status', max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    
+    # Controle
+    synced_with_asaas = models.BooleanField('Sincronizado com Asaas', default=False)
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Link de Pagamento'
+        verbose_name_plural = 'Links de Pagamento'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.nome} - {'R$ ' + str(self.valor) if self.valor else 'Valor Livre'}"

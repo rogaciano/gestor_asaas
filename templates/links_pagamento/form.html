@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'link_pagamento_list' %}" class="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para lista
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">{{ title }}</h1>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Informações Básicas -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-info-circle text-blue-500"></i> Informações Básicas
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="id_nome" class="block text-sm font-medium text-gray-700 mb-2">
+                        Nome do Link *
+                    </label>
+                    {{ form.nome }}
+                    {% if form.nome.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.nome.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label for="id_descricao" class="block text-sm font-medium text-gray-700 mb-2">
+                        Descrição
+                    </label>
+                    {{ form.descricao }}
+                    {% if form.descricao.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.descricao.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Descreva o produto ou serviço que será cobrado
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="id_cliente" class="block text-sm font-medium text-gray-700 mb-2">
+                        Cliente
+                    </label>
+                    {{ form.cliente }}
+                    {% if form.cliente.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.cliente.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> Opcional - Vincular link a um cliente específico
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Valores e Pagamento -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-dollar-sign text-green-500"></i> Valores e Pagamento
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="id_valor" class="block text-sm font-medium text-gray-700 mb-2">
+                        Valor
+                    </label>
+                    {{ form.valor }}
+                    {% if form.valor.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.valor.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> Deixe em branco para permitir valor livre (cliente define o valor)
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="id_billing_type" class="block text-sm font-medium text-gray-700 mb-2">
+                        Forma de Pagamento *
+                    </label>
+                    {{ form.billing_type }}
+                    {% if form.billing_type.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.billing_type.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        <strong>Boleto:</strong> Cliente recebe boleto | 
+                        <strong>Pix:</strong> QR Code automático | 
+                        <strong>Cartão:</strong> Pagamento com cartão | 
+                        <strong>Perguntar:</strong> Cliente escolhe
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tipo de Cobrança -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-link text-purple-500"></i> Tipo de Cobrança
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="id_charge_type" class="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo de Cobrança *
+                    </label>
+                    {{ form.charge_type }}
+                    {% if form.charge_type.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.charge_type.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        <strong>Avulso:</strong> Cobrança única | 
+                        <strong>Parcelado:</strong> Permite parcelamento | 
+                        <strong>Recorrente:</strong> Cria assinatura automática
+                    </p>
+                </div>
+                
+                <div id="max_installments_field">
+                    <label for="id_max_installments" class="block text-sm font-medium text-gray-700 mb-2">
+                        Máximo de Parcelas
+                    </label>
+                    {{ form.max_installments }}
+                    {% if form.max_installments.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.max_installments.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Apenas para cobrança parcelada
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configurações Adicionais -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-cog text-orange-500"></i> Configurações Adicionais
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="id_due_date_limit_days" class="block text-sm font-medium text-gray-700 mb-2">
+                        Prazo de Vencimento (dias)
+                    </label>
+                    {{ form.due_date_limit_days }}
+                    {% if form.due_date_limit_days.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.due_date_limit_days.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        Quantos dias após o acesso o link expira (deixe em branco para sem expiração)
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'link_pagamento_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-times mr-2"></i> Cancelar
+            </a>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-save mr-2"></i> Salvar
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+                <strong>Importante:</strong> O link de pagamento será automaticamente criado no Asaas ao salvar. Após a criação, você receberá a URL pública para compartilhar com seus clientes.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Mostra/oculta campo de parcelas baseado no tipo de cobrança
+document.addEventListener('DOMContentLoaded', function() {
+    const chargeTypeField = document.getElementById('id_charge_type');
+    const maxInstallmentsField = document.getElementById('max_installments_field');
+    
+    function toggleMaxInstallments() {
+        if (chargeTypeField.value === 'INSTALLMENT') {
+            maxInstallmentsField.style.display = 'block';
+        } else {
+            maxInstallmentsField.style.display = 'none';
+        }
+    }
+    
+    chargeTypeField.addEventListener('change', toggleMaxInstallments);
+    toggleMaxInstallments(); // Executa na carga inicial
+});
+</script>
+{% endblock %}
+

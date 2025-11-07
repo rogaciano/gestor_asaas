@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Link de Pagamento - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'link_pagamento_list' %}" class="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para lista
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">Excluir Link de Pagamento</h1>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="mb-6">
+        <div class="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto">
+            <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+        </div>
+        <h2 class="mt-4 text-xl font-semibold text-center text-gray-900">
+            Tem certeza que deseja excluir este link de pagamento?
+        </h2>
+        <p class="mt-2 text-center text-gray-600">
+            Esta ação não pode ser desfeita. O link será removido do Asaas.
+        </p>
+    </div>
+    
+    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+        <dl class="space-y-3">
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Nome:</dt>
+                <dd class="text-sm text-gray-900 font-medium">{{ link.nome }}</dd>
+            </div>
+            {% if link.descricao %}
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Descrição:</dt>
+                <dd class="text-sm text-gray-900">{{ link.descricao }}</dd>
+            </div>
+            {% endif %}
+            {% if link.cliente %}
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Cliente:</dt>
+                <dd class="text-sm text-gray-900">{{ link.cliente.name }}</dd>
+            </div>
+            {% endif %}
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Valor:</dt>
+                <dd class="text-sm text-gray-900 font-bold text-green-600">
+                    {% if link.valor %}R$ {{ link.valor }}{% else %}Valor Livre{% endif %}
+                </dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Tipo de Cobrança:</dt>
+                <dd class="text-sm text-gray-900">{{ link.get_charge_type_display }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Forma de Pagamento:</dt>
+                <dd class="text-sm text-gray-900">{{ link.get_billing_type_display }}</dd>
+            </div>
+            {% if link.url %}
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">URL:</dt>
+                <dd class="text-sm text-blue-600 break-all">
+                    <a href="{{ link.url }}" target="_blank" class="hover:underline">{{ link.url|truncatechars:50 }}</a>
+                </dd>
+            </div>
+            {% endif %}
+            {% if link.synced_with_asaas %}
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Status:</dt>
+                <dd class="text-sm">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Sincronizado com Asaas
+                    </span>
+                </dd>
+            </div>
+            {% endif %}
+        </dl>
+    </div>
+    
+    {% if link.synced_with_asaas %}
+    <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                    <strong>Atenção:</strong> Este link está sincronizado com o Asaas. Ao excluí-lo aqui, ele também será removido da plataforma Asaas e não poderá mais ser usado para pagamentos.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'link_pagamento_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-times mr-2"></i> Cancelar
+            </a>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                <i class="fas fa-trash mr-2"></i> Sim, Excluir
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

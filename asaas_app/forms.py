@@ -1,5 +1,5 @@
 from django import forms
-from .models import Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao
+from .models import Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao, LinkPagamento
 
 
 class ClienteForm(forms.ModelForm):
@@ -221,6 +221,53 @@ class RegraCategorizacaoForm(forms.ModelForm):
             }),
             'ativa': forms.CheckboxInput(attrs={
                 'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+            }),
+        }
+
+
+class LinkPagamentoForm(forms.ModelForm):
+    """Formulário para cadastro de links de pagamento"""
+    
+    class Meta:
+        model = LinkPagamento
+        fields = [
+            'nome', 'descricao', 'valor', 'billing_type', 'charge_type',
+            'due_date_limit_days', 'max_installments', 'cliente'
+        ]
+        widgets = {
+            'nome': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Nome do link de pagamento'
+            }),
+            'descricao': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Descrição do produto/serviço',
+                'rows': 4
+            }),
+            'valor': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Deixe em branco para valor livre',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'billing_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }),
+            'charge_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }),
+            'due_date_limit_days': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Ex: 10 (deixe em branco se não expira)',
+                'min': '1'
+            }),
+            'max_installments': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Apenas para cobrança parcelada',
+                'min': '1'
+            }),
+            'cliente': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
         }
 

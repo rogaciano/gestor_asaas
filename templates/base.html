@@ -38,6 +38,9 @@
                         <a href="{% url 'recorrencia_list' %}" class="{% if 'recorrencia' in request.path %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             <i class="fas fa-repeat mr-2"></i> Recorrências
                         </a>
+                        <a href="{% url 'link_pagamento_list' %}" class="{% if 'links-pagamento' in request.path or 'link_pagamento' in request.path %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            <i class="fas fa-link mr-2"></i> Links de Pagamento
+                        </a>
                         
                         <!-- Financeiro Dropdown -->
                         <div class="relative flex" x-data="{ openFinanceiro: false }">

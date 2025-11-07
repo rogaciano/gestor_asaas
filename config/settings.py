@@ -115,12 +115,27 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ASAAS_API_KEY = config('ASAAS_API_KEY', default='')
 ASAAS_API_URL = config('ASAAS_API_URL', default='https://sandbox.asaas.com/api/v3')
 
+# WhatsApp API Configuration
+# Suporta tanto EVOLUTION_* quanto WHATSAPP_* para compatibilidade
+WHATSAPP_API_URL = config('EVOLUTION_API_URL', config('WHATSAPP_API_URL', default=''))
+WHATSAPP_API_KEY = config('EVOLUTION_API_KEY', config('WHATSAPP_API_KEY', default=''))
+WHATSAPP_INSTANCE_ID = config('EVOLUTION_INSTANCE_ID', config('WHATSAPP_INSTANCE_ID', default=''))
+WHATSAPP_TOKEN = config('WHATSAPP_TOKEN', default='')
+WHATSAPP_PROVIDER = config('WHATSAPP_PROVIDER', default='evolution')  # evolution, whatsapp_business, ou custom
+# Lista de números para receber notificações/testes (separados por vírgula)
+WHATSAPP_NUMBERS = config('WHATSAPP_NUMBERS', default='').split(',') if config('WHATSAPP_NUMBERS', default='') else []
+
 # Subdiretório (para deploy em http://IP/asaas/)
 FORCE_SCRIPT_NAME = config('FORCE_SCRIPT_NAME', default='')
 if FORCE_SCRIPT_NAME:
     STATIC_URL = FORCE_SCRIPT_NAME + '/static/'
+    # Configurar SESSION_COOKIE_PATH para subdiretório
+    SESSION_COOKIE_PATH = FORCE_SCRIPT_NAME + '/'
+    CSRF_COOKIE_PATH = FORCE_SCRIPT_NAME + '/'
 else:
     STATIC_URL = 'static/'
+    SESSION_COOKIE_PATH = '/'
+    CSRF_COOKIE_PATH = '/'
 
 # Login/Logout URLs
 LOGIN_URL = 'login'
@@ -140,6 +155,13 @@ SESSION_COOKIE_AGE = 3600 * 8  # 8 horas
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)  # True em produção com HTTPS
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
+
+# CSRF Trusted Origins (importante para produção com IP ou domínio específico)
+CSRF_TRUSTED_ORIGINS_STR = config('CSRF_TRUSTED_ORIGINS', default='')
+if CSRF_TRUSTED_ORIGINS_STR:
+    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',')]
+else:
+    CSRF_TRUSTED_ORIGINS = []
 
 # Security Headers
 SECURE_BROWSER_XSS_FILTER = True  # Proteção XSS

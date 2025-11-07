@@ -197,4 +197,82 @@ class AsaasService:
         """
         params = {'limit': limit, 'offset': offset}
         return self._make_request('GET', 'transfers', params=params)
+    
+    # ==================== PAYMENT LINKS (LINKS DE PAGAMENTO) ====================
+    
+    def create_payment_link(self, payment_link_data: Dict) -> Dict:
+        """
+        Cria um novo link de pagamento no Asaas
+        
+        Args:
+            payment_link_data: Dicionário com os dados do link
+                Exemplo: {
+                    'name': 'Nome do link',
+                    'description': 'Descrição',
+                    'value': 50.00,
+                    'billingType': 'UNDEFINED',
+                    'chargeType': 'DETACHED',
+                    'dueDateLimitDays': 10
+                }
+        
+        Returns:
+            Dict com o resultado da operação
+        """
+        return self._make_request('POST', 'paymentLinks', payment_link_data)
+    
+    def get_payment_link(self, payment_link_id: str) -> Dict:
+        """Busca um link de pagamento pelo ID"""
+        return self._make_request('GET', f'paymentLinks/{payment_link_id}')
+    
+    def update_payment_link(self, payment_link_id: str, payment_link_data: Dict) -> Dict:
+        """Atualiza os dados de um link de pagamento"""
+        return self._make_request('PUT', f'paymentLinks/{payment_link_id}', payment_link_data)
+    
+    def delete_payment_link(self, payment_link_id: str) -> Dict:
+        """Remove um link de pagamento"""
+        return self._make_request('DELETE', f'paymentLinks/{payment_link_id}')
+    
+    def list_payment_links(self, limit: int = 100, offset: int = 0) -> Dict:
+        """
+        Lista todos os links de pagamento
+        
+        Args:
+            limit: Número máximo de registros por página (padrão: 100)
+            offset: Número de registros a pular (paginação)
+        
+        Returns:
+            Dict com a lista de links de pagamento
+        """
+        params = {'limit': limit, 'offset': offset}
+        return self._make_request('GET', 'paymentLinks', params=params)
+    
+    # ==================== COBRANÇAS (PAYMENTS) ====================
+    
+    def get_payment(self, payment_id: str) -> Dict:
+        """
+        Busca uma cobrança pelo ID
+        Retorna informações incluindo bankSlipUrl (URL do PDF do boleto)
+        
+        Args:
+            payment_id: ID da cobrança no Asaas
+        
+        Returns:
+            Dict com os dados da cobrança incluindo bankSlipUrl
+        """
+        return self._make_request('GET', f'payments/{payment_id}')
+    
+    def list_subscription_payments(self, subscription_id: str, limit: int = 100, offset: int = 0) -> Dict:
+        """
+        Lista as cobranças de uma assinatura específica
+        
+        Args:
+            subscription_id: ID da assinatura no Asaas
+            limit: Número máximo de registros por página
+            offset: Número de registros a pular
+        
+        Returns:
+            Dict com a lista de cobranças da assinatura
+        """
+        params = {'subscription': subscription_id, 'limit': limit, 'offset': offset}
+        return self._make_request('GET', 'payments', params=params)
 

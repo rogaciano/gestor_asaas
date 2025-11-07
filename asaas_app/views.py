@@ -3,12 +3,15 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.urls import reverse
 from django.db.models import Q, Sum, Count
 from django.db.models.functions import TruncMonth
-from .models import Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao
-from .forms import ClienteForm, RecorrenciaForm, PlanoContasForm, MovimentacaoForm, RegraCategorizacaoForm
+from .models import Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao, LinkPagamento
+from .forms import ClienteForm, RecorrenciaForm, PlanoContasForm, MovimentacaoForm, RegraCategorizacaoForm, LinkPagamentoForm
 from .services import AsaasService
+from .whatsapp_service import WhatsAppService
 from datetime import datetime, timedelta
+from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,7 +22,7 @@ logger = logging.getLogger(__name__)
 def login_view(request):
     """View de login"""
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect(reverse('home'))
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -29,9 +32,23 @@ def login_view(request):
         
         if user is not None:
             login(request, user)
+            
+            # Obter o next_url do GET, se existir
+            next_url = request.GET.get('next')
+            
+            # Determinar URL de destino
+            if next_url and not next_url.startswith('http'):
+                redirect_url = next_url
+            else:
+                redirect_url = reverse('home')
+            
+            # Log para debug
+            logger.info(f"Login successful for {user.username}, redirecting to: {redirect_url}")
+            
+            # Adicionar mensagem apenas após determinar o redirect
             messages.success(request, f'Bem-vindo, {user.username}!')
-            next_url = request.GET.get('next', 'home')
-            return redirect(next_url)
+            
+            return redirect(redirect_url)
         else:
             messages.error(request, 'Usuário ou senha incorretos.')
     
@@ -256,50 +273,55 @@ def cliente_sync(request, pk):
 @login_required(login_url='login')
 def recorrencia_list(request):
     """Lista todas as recorrências com filtros e pesquisa"""
-    recorrencias = Recorrencia.objects.select_related('cliente').all()
-    
-    # Pesquisa por nome do cliente ou descrição
-    search_query = request.GET.get('search', '').strip()
-    if search_query:
-        recorrencias = recorrencias.filter(
-            Q(cliente__name__icontains=search_query) |
-            Q(description__icontains=search_query)
-        )
-    
-    # Filtro por status
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        recorrencias = recorrencias.filter(status=status_filter)
-    
-    # Filtro por ciclo
-    cycle_filter = request.GET.get('cycle', '')
-    if cycle_filter:
-        recorrencias = recorrencias.filter(cycle=cycle_filter)
-    
-    # Filtro por forma de pagamento
-    billing_type_filter = request.GET.get('billing_type', '')
-    if billing_type_filter:
-        recorrencias = recorrencias.filter(billing_type=billing_type_filter)
-    
-    # Filtro por sincronização
-    sync_status = request.GET.get('sync_status', '')
-    if sync_status == 'synced':
-        recorrencias = recorrencias.filter(synced_with_asaas=True)
-    elif sync_status == 'not_synced':
-        recorrencias = recorrencias.filter(synced_with_asaas=False)
-    
-    # Ordenação
-    recorrencias = recorrencias.order_by('-created_at')
-    
-    context = {
-        'recorrencias': recorrencias,
-        'search_query': search_query,
-        'status_filter': status_filter,
-        'cycle_filter': cycle_filter,
-        'billing_type_filter': billing_type_filter,
-        'sync_status': sync_status,
-    }
-    return render(request, 'recorrencias/list.html', context)
+    try:
+        recorrencias = Recorrencia.objects.select_related('cliente').all()
+        
+        # Pesquisa por nome do cliente ou descrição
+        search_query = request.GET.get('search', '').strip()
+        if search_query:
+            recorrencias = recorrencias.filter(
+                Q(cliente__name__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+        
+        # Filtro por status
+        status_filter = request.GET.get('status', '')
+        if status_filter:
+            recorrencias = recorrencias.filter(status=status_filter)
+        
+        # Filtro por ciclo
+        cycle_filter = request.GET.get('cycle', '')
+        if cycle_filter:
+            recorrencias = recorrencias.filter(cycle=cycle_filter)
+        
+        # Filtro por forma de pagamento
+        billing_type_filter = request.GET.get('billing_type', '')
+        if billing_type_filter:
+            recorrencias = recorrencias.filter(billing_type=billing_type_filter)
+        
+        # Filtro por sincronização
+        sync_status = request.GET.get('sync_status', '')
+        if sync_status == 'synced':
+            recorrencias = recorrencias.filter(synced_with_asaas=True)
+        elif sync_status == 'not_synced':
+            recorrencias = recorrencias.filter(synced_with_asaas=False)
+        
+        # Ordenação
+        recorrencias = recorrencias.order_by('-created_at')
+        
+        context = {
+            'recorrencias': recorrencias,
+            'search_query': search_query,
+            'status_filter': status_filter,
+            'cycle_filter': cycle_filter,
+            'billing_type_filter': billing_type_filter,
+            'sync_status': sync_status,
+        }
+        return render(request, 'recorrencias/list.html', context)
+    except Exception as e:
+        logger.error(f"Erro ao listar recorrências: {str(e)}", exc_info=True)
+        messages.error(request, f'Erro ao carregar recorrências: {str(e)}')
+        return render(request, 'recorrencias/list.html', {'recorrencias': []})
 
 
 @login_required(login_url='login')
@@ -338,6 +360,12 @@ def recorrencia_create(request):
                 recorrencia.asaas_id = result['data']['id']
                 recorrencia.synced_with_asaas = True
                 messages.success(request, 'Recorrência cadastrada com sucesso no Asaas!')
+                
+                # Cria link de pagamento automaticamente
+                criar_link_pagamento_recorrencia(recorrencia)
+                
+                # Envia mensagem WhatsApp para o cliente
+                enviar_whatsapp_recorrencia(recorrencia)
             else:
                 messages.warning(request, f'Recorrência salva localmente, mas não foi possível sincronizar com Asaas: {result.get("error")}')
             
@@ -406,6 +434,174 @@ def recorrencia_delete(request, pk):
         return redirect('recorrencia_list')
     
     return render(request, 'recorrencias/delete.html', {'recorrencia': recorrencia})
+
+
+@login_required(login_url='login')
+def recorrencia_boletos(request, pk):
+    """
+    Lista os boletos (cobranças) de uma recorrência e permite download
+    """
+    recorrencia = get_object_or_404(Recorrencia, pk=pk)
+    
+    if not recorrencia.asaas_id:
+        messages.error(request, 'Esta recorrência precisa estar sincronizada com o Asaas para visualizar os boletos.')
+        return redirect('recorrencia_list')
+    
+    # Busca as cobranças da assinatura no Asaas
+    asaas_service = AsaasService()
+    result = asaas_service.list_subscription_payments(recorrencia.asaas_id)
+    
+    boletos = []
+    if result.get('success'):
+        payments = result['data'].get('data', [])
+        for payment in payments:
+            boletos.append({
+                'id': payment.get('id'),
+                'value': payment.get('value'),
+                'dueDate': payment.get('dueDate'),
+                'status': payment.get('status'),
+                'bankSlipUrl': payment.get('bankSlipUrl'),
+                'invoiceUrl': payment.get('invoiceUrl'),
+                'billingType': payment.get('billingType'),
+            })
+    else:
+        messages.error(request, f'Erro ao buscar boletos: {result.get("error")}')
+    
+    context = {
+        'recorrencia': recorrencia,
+        'boletos': boletos,
+    }
+    
+    return render(request, 'recorrencias/boletos.html', context)
+
+
+@login_required(login_url='login')
+def recorrencia_enviar_boleto_whatsapp(request, pk):
+    """
+    Busca o último boleto da recorrência e envia pelo WhatsApp
+    """
+    recorrencia = get_object_or_404(Recorrencia, pk=pk)
+    
+    # Verifica se tem telefone
+    telefone = recorrencia.cliente.mobilePhone or recorrencia.cliente.phone
+    if not telefone:
+        messages.error(request, 'Cliente não possui telefone cadastrado.')
+        return redirect('recorrencia_list')
+    
+    # Verifica se está sincronizada
+    if not recorrencia.asaas_id:
+        messages.error(request, 'Recorrência precisa estar sincronizada com o Asaas.')
+        return redirect('recorrencia_list')
+    
+    # Busca o último boleto
+    asaas_service = AsaasService()
+    result = asaas_service.list_subscription_payments(recorrencia.asaas_id, limit=1)
+    
+    if not result.get('success') or not result['data'].get('data'):
+        messages.error(request, 'Nenhum boleto encontrado para esta recorrência.')
+        return redirect('recorrencia_list')
+    
+    boleto = result['data']['data'][0]
+    bank_slip_url = boleto.get('bankSlipUrl')
+    
+    if not bank_slip_url:
+        messages.error(request, 'Boleto não possui URL de download.')
+        return redirect('recorrencia_list')
+    
+    # Formata a mensagem
+    cliente_nome = recorrencia.cliente.name.split()[0]  # Primeiro nome
+    valor = boleto.get('value', recorrencia.value)
+    vencimento = boleto.get('dueDate', recorrencia.next_due_date)
+    
+    mensagem = f"""Olá *{cliente_nome}*! 👋
+
+🔔 *Cobrança Recorrente - {recorrencia.description}*
+
+💰 Valor: R$ {valor}
+📅 Vencimento: {vencimento}
+
+📄 *Acesse seu boleto:*
+{bank_slip_url}
+
+Você também pode pagar via PIX usando o QR Code que está no boleto.
+
+✅ Após o pagamento, você receberá a confirmação automaticamente.
+
+Dúvidas? Estamos à disposição!
+
+Atenciosamente,
+Equipe de Cobrança"""
+    
+    # Envia pelo WhatsApp
+    whatsapp_service = WhatsAppService()
+    result_whatsapp = whatsapp_service.send_message(telefone, mensagem)
+    
+    if result_whatsapp.get('success'):
+        messages.success(request, f'Boleto enviado com sucesso para {telefone}!')
+    else:
+        messages.error(request, f'Erro ao enviar WhatsApp: {result_whatsapp.get("error")}')
+    
+    return redirect('recorrencia_list')
+
+
+@login_required(login_url='login')
+def recorrencia_enviar_link_whatsapp(request, pk):
+    """
+    Envia link de pagamento da recorrência pelo WhatsApp
+    """
+    recorrencia = get_object_or_404(Recorrencia, pk=pk)
+    
+    # Verifica se tem telefone
+    telefone = recorrencia.cliente.mobilePhone or recorrencia.cliente.phone
+    if not telefone:
+        messages.error(request, 'Cliente não possui telefone cadastrado.')
+        return redirect('recorrencia_list')
+    
+    # Busca o link de pagamento desta recorrência
+    link = LinkPagamento.objects.filter(
+        cliente=recorrencia.cliente,
+        nome__icontains=recorrencia.description
+    ).first()
+    
+    if not link or not link.url:
+        messages.error(request, 'Nenhum link de pagamento encontrado. Crie um link primeiro.')
+        return redirect('recorrencia_list')
+    
+    # Formata a mensagem
+    cliente_nome = recorrencia.cliente.name.split()[0]  # Primeiro nome
+    
+    mensagem = f"""Olá *{cliente_nome}*! 👋
+
+🔗 *Link de Pagamento - {recorrencia.description}*
+
+💰 Valor: R$ {recorrencia.value}
+🔄 Frequência: {recorrencia.get_cycle_display()}
+
+📲 *Clique no link abaixo para pagar:*
+{link.url}
+
+✅ Escolha sua forma de pagamento preferida:
+• PIX (instantâneo)
+• Boleto Bancário
+• Cartão de Crédito
+
+Após o pagamento, você receberá a confirmação automaticamente.
+
+Dúvidas? Estamos à disposição!
+
+Atenciosamente,
+Equipe de Cobrança"""
+    
+    # Envia pelo WhatsApp
+    whatsapp_service = WhatsAppService()
+    result_whatsapp = whatsapp_service.send_message(telefone, mensagem)
+    
+    if result_whatsapp.get('success'):
+        messages.success(request, f'Link de pagamento enviado com sucesso para {telefone}!')
+    else:
+        messages.error(request, f'Erro ao enviar WhatsApp: {result_whatsapp.get("error")}')
+    
+    return redirect('recorrencia_list')
 
 
 @login_required(login_url='login')
@@ -781,73 +977,99 @@ def import_movimentacoes(request):
         importadas = 0
         atualizadas = 0
         erros = 0
-        
-        # Busca transações financeiras
-        result = asaas_service.get_financial_transactions(
-            limit=500, 
-            date_from=data_inicio, 
-            date_to=data_fim
-        )
-        
-        if not result.get('success'):
-            messages.error(request, f'Erro ao buscar movimentações: {result.get("error")}')
-            return redirect('movimentacao_list')
-        
-        transactions = result['data'].get('data', [])
-        
-        for trans in transactions:
-            try:
-                # Mapeia o tipo de transação
-                tipo_map = {
-                    'PAYMENT': 'PAYMENT',
-                    'PAYMENT_FEE': 'PAYMENT_FEE',
-                    'TRANSFER': 'TRANSFER',
-                    'TRANSFER_FEE': 'TRANSFER_FEE',
-                    'REFUND': 'REFUND',
-                    'CHARGEBACK': 'CHARGEBACK',
-                }
-                tipo = tipo_map.get(trans.get('type'), 'OTHER')
-                
-                # Tenta encontrar cliente relacionado
-                cliente = None
-                if trans.get('customer'):
+        total_liquido_periodo = Decimal('0')
+
+        # Paginação: busca todas as páginas do período informado
+        limit = 500
+        offset = 0
+        while True:
+            result = asaas_service.get_financial_transactions(
+                limit=limit,
+                offset=offset,
+                date_from=data_inicio,
+                date_to=data_fim
+            )
+
+            if not result.get('success'):
+                messages.error(request, f'Erro ao buscar movimentações: {result.get("error")}')
+                break
+
+            transactions = result['data'].get('data', [])
+
+            if not transactions:
+                break
+
+            for trans in transactions:
+                try:
+                    # Soma líquida do período (usa o valor retornado pela API)
                     try:
-                        cliente = Cliente.objects.get(asaas_id=trans['customer'])
-                    except Cliente.DoesNotExist:
+                        total_liquido_periodo += Decimal(str(trans.get('value', 0)))
+                    except Exception:
                         pass
-                
-                # Cria ou atualiza movimentação
-                movimentacao, created = Movimentacao.objects.update_or_create(
-                    asaas_id=trans['id'],
-                    defaults={
-                        'data': datetime.strptime(trans['date'], '%Y-%m-%d').date(),
-                        'descricao': trans.get('description', ''),
-                        'tipo': tipo,
-                        'valor': trans.get('value', 0),
-                        'cliente': cliente,
-                        'dados_asaas': trans,
-                        'synced_with_asaas': True,
+
+                    # Mapeia o tipo de transação
+                    tipo_map = {
+                        'PAYMENT': 'PAYMENT',
+                        'PAYMENT_FEE': 'PAYMENT_FEE',
+                        'TRANSFER': 'TRANSFER',
+                        'TRANSFER_FEE': 'TRANSFER_FEE',
+                        'REFUND': 'REFUND',
+                        'CHARGEBACK': 'CHARGEBACK',
+                        'ANTICIPATION': 'ANTICIPATION',
+                        'ANTICIPATION_FEE': 'ANTICIPATION_FEE',
                     }
-                )
-                
-                if created:
-                    importadas += 1
-                    # Tenta aplicar regras de categorização automática
-                    aplicar_regras_categorizacao(movimentacao)
-                else:
-                    atualizadas += 1
-                    
-            except Exception as e:
-                logger.error(f'Erro ao importar movimentação {trans.get("id")}: {str(e)}')
-                erros += 1
-        
+                    tipo = tipo_map.get(trans.get('type'), 'OTHER')
+
+                    # Tenta encontrar cliente relacionado
+                    cliente = None
+                    if trans.get('customer'):
+                        try:
+                            cliente = Cliente.objects.get(asaas_id=trans['customer'])
+                        except Cliente.DoesNotExist:
+                            pass
+
+                    # Cria ou atualiza movimentação
+                    movimentacao, created = Movimentacao.objects.update_or_create(
+                        asaas_id=trans['id'],
+                        defaults={
+                            'data': datetime.strptime(trans['date'], '%Y-%m-%d').date(),
+                            'descricao': trans.get('description', ''),
+                            'tipo': tipo,
+                            'valor': trans.get('value', 0),
+                            'cliente': cliente,
+                            'dados_asaas': trans,
+                            'synced_with_asaas': True,
+                        }
+                    )
+
+                    if created:
+                        importadas += 1
+                        # Tenta aplicar regras de categorização automática
+                        aplicar_regras_categorizacao(movimentacao)
+                    else:
+                        atualizadas += 1
+
+                except Exception as e:
+                    logger.error(f'Erro ao importar movimentação {trans.get("id")}: {str(e)}')
+                    erros += 1
+
+            # Avança a janela de paginação
+            offset += len(transactions)
+
+            # Se a API informar que não há mais páginas, encerra
+            has_more = result['data'].get('hasMore')
+            if has_more is False or len(transactions) < limit:
+                break
+
         if importadas > 0:
             messages.success(request, f'{importadas} movimentação(ões) importada(s) com sucesso!')
         if atualizadas > 0:
             messages.info(request, f'{atualizadas} movimentação(ões) atualizada(s).')
         if erros > 0:
             messages.warning(request, f'{erros} erro(s) durante a importação.')
-        
+        # Resumo do valor líquido do período
+        messages.info(request, f"Valor líquido do período importado: {total_liquido_periodo}")
+
         return redirect('movimentacao_list')
     
     return render(request, 'financeiro/import_movimentacoes.html')
@@ -1061,3 +1283,492 @@ def relatorios(request):
         'top_clientes': top_clientes,
     }
     return render(request, 'financeiro/relatorios.html', context)
+
+
+# ==================== LINKS DE PAGAMENTO ====================
+
+@login_required(login_url='login')
+def link_pagamento_list(request):
+    """Lista todos os links de pagamento"""
+    links = LinkPagamento.objects.select_related('cliente').all()
+    
+    # Filtros
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        links = links.filter(
+            Q(nome__icontains=search_query) |
+            Q(descricao__icontains=search_query)
+        )
+    
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        links = links.filter(status=status_filter)
+    
+    charge_type_filter = request.GET.get('charge_type', '')
+    if charge_type_filter:
+        links = links.filter(charge_type=charge_type_filter)
+    
+    context = {
+        'links': links.order_by('-created_at'),
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'charge_type_filter': charge_type_filter,
+    }
+    return render(request, 'links_pagamento/list.html', context)
+
+
+@login_required(login_url='login')
+def link_pagamento_create(request):
+    """Cria um novo link de pagamento"""
+    if request.method == 'POST':
+        form = LinkPagamentoForm(request.POST)
+        if form.is_valid():
+            link = form.save(commit=False)
+            
+            # Prepara dados para o Asaas
+            asaas_service = AsaasService()
+            payment_link_data = {
+                'name': link.nome,
+                'description': link.descricao or '',
+                'billingType': link.billing_type,
+                'chargeType': link.charge_type,
+            }
+            
+            # Adiciona valor se informado
+            if link.valor:
+                payment_link_data['value'] = float(link.valor)
+            
+            # Adiciona prazo de vencimento se informado
+            if link.due_date_limit_days:
+                payment_link_data['dueDateLimitDays'] = link.due_date_limit_days
+            
+            # Adiciona máximo de parcelas se informado
+            if link.max_installments:
+                payment_link_data['maxInstallments'] = link.max_installments
+            
+            # Adiciona cliente se informado
+            if link.cliente and link.cliente.asaas_id:
+                payment_link_data['customer'] = link.cliente.asaas_id
+            
+            # Cria no Asaas
+            result = asaas_service.create_payment_link(payment_link_data)
+            
+            if result.get('success'):
+                data = result['data']
+                link.asaas_id = data.get('id')
+                link.url = data.get('url')
+                link.status = data.get('status', 'ACTIVE')
+                link.synced_with_asaas = True
+                messages.success(request, 'Link de pagamento criado com sucesso no Asaas!')
+            else:
+                messages.warning(request, f'Link salvo localmente, mas não foi possível criar no Asaas: {result.get("error")}')
+            
+            link.save()
+            return redirect('link_pagamento_list')
+    else:
+        form = LinkPagamentoForm()
+    
+    return render(request, 'links_pagamento/form.html', {'form': form, 'title': 'Novo Link de Pagamento'})
+
+
+@login_required(login_url='login')
+def link_pagamento_edit(request, pk):
+    """Edita um link de pagamento existente"""
+    link = get_object_or_404(LinkPagamento, pk=pk)
+    
+    if request.method == 'POST':
+        form = LinkPagamentoForm(request.POST, instance=link)
+        if form.is_valid():
+            link = form.save(commit=False)
+            
+            # Se está sincronizado, atualiza no Asaas
+            if link.asaas_id:
+                asaas_service = AsaasService()
+                payment_link_data = {
+                    'name': link.nome,
+                    'description': link.descricao or '',
+                    'billingType': link.billing_type,
+                }
+                
+                if link.valor:
+                    payment_link_data['value'] = float(link.valor)
+                
+                if link.due_date_limit_days:
+                    payment_link_data['dueDateLimitDays'] = link.due_date_limit_days
+                
+                result = asaas_service.update_payment_link(link.asaas_id, payment_link_data)
+                
+                if result.get('success'):
+                    data = result.get('data', {})
+                    link.url = data.get('url', link.url)
+                    link.status = data.get('status', link.status)
+                    messages.success(request, 'Link de pagamento atualizado com sucesso!')
+                else:
+                    messages.warning(request, f'Link atualizado localmente, mas não foi possível atualizar no Asaas: {result.get("error")}')
+            
+            link.save()
+            return redirect('link_pagamento_list')
+    else:
+        form = LinkPagamentoForm(instance=link)
+    
+    return render(request, 'links_pagamento/form.html', {'form': form, 'title': 'Editar Link de Pagamento', 'link': link})
+
+
+@login_required(login_url='login')
+def link_pagamento_delete(request, pk):
+    """Deleta um link de pagamento"""
+    link = get_object_or_404(LinkPagamento, pk=pk)
+    
+    if request.method == 'POST':
+        # Se está sincronizado, tenta deletar no Asaas
+        if link.asaas_id:
+            asaas_service = AsaasService()
+            result = asaas_service.delete_payment_link(link.asaas_id)
+            
+            if not result.get('success'):
+                messages.warning(request, f'Link removido localmente, mas não foi possível remover do Asaas: {result.get("error")}')
+        
+        link.delete()
+        messages.success(request, 'Link de pagamento removido com sucesso!')
+        return redirect('link_pagamento_list')
+    
+    return render(request, 'links_pagamento/delete.html', {'link': link})
+
+
+@login_required(login_url='login')
+def link_pagamento_sync(request, pk):
+    """Sincroniza um link de pagamento com o Asaas"""
+    link = get_object_or_404(LinkPagamento, pk=pk)
+    
+    if not link.asaas_id:
+        messages.error(request, 'Link não possui ID do Asaas. Crie um novo link.')
+        return redirect('link_pagamento_list')
+    
+    asaas_service = AsaasService()
+    result = asaas_service.get_payment_link(link.asaas_id)
+    
+    if result.get('success'):
+        data = result['data']
+        link.url = data.get('url', link.url)
+        link.status = data.get('status', link.status)
+        link.nome = data.get('name', link.nome)
+        link.descricao = data.get('description', link.descricao)
+        if data.get('value'):
+            link.valor = data.get('value')
+        link.synced_with_asaas = True
+        link.save()
+        messages.success(request, 'Link de pagamento sincronizado com sucesso!')
+    else:
+        messages.error(request, f'Erro ao sincronizar link: {result.get("error")}')
+    
+    return redirect('link_pagamento_list')
+
+
+@login_required(login_url='login')
+def import_link_pagamento(request):
+    """Importa links de pagamento do Asaas"""
+    if request.method == 'POST':
+        asaas_service = AsaasService()
+        importados = 0
+        atualizados = 0
+        erros = 0
+        
+        # Busca todas as páginas
+        limit = 100
+        offset = 0
+        
+        while True:
+            result = asaas_service.list_payment_links(limit=limit, offset=offset)
+            
+            if not result.get('success'):
+                messages.error(request, f'Erro ao buscar links: {result.get("error")}')
+                break
+            
+            links_data = result['data'].get('data', [])
+            
+            if not links_data:
+                break
+            
+            for link_data in links_data:
+                try:
+                    # Busca cliente se informado
+                    cliente = None
+                    if link_data.get('customer'):
+                        try:
+                            cliente = Cliente.objects.get(asaas_id=link_data['customer'])
+                        except Cliente.DoesNotExist:
+                            pass
+                    
+                    # Cria ou atualiza link
+                    link, created = LinkPagamento.objects.update_or_create(
+                        asaas_id=link_data['id'],
+                        defaults={
+                            'nome': link_data.get('name', ''),
+                            'descricao': link_data.get('description', ''),
+                            'valor': link_data.get('value'),
+                            'billing_type': link_data.get('billingType', 'UNDEFINED'),
+                            'charge_type': link_data.get('chargeType', 'DETACHED'),
+                            'due_date_limit_days': link_data.get('dueDateLimitDays'),
+                            'max_installments': link_data.get('maxInstallments'),
+                            'cliente': cliente,
+                            'url': link_data.get('url'),
+                            'status': link_data.get('status', 'ACTIVE'),
+                            'synced_with_asaas': True,
+                        }
+                    )
+                    
+                    if created:
+                        importados += 1
+                    else:
+                        atualizados += 1
+                        
+                except Exception as e:
+                    logger.error(f'Erro ao importar link {link_data.get("id")}: {str(e)}')
+                    erros += 1
+            
+            # Avança paginação
+            offset += len(links_data)
+            
+            # Verifica se há mais páginas
+            has_more = result['data'].get('hasMore')
+            if has_more is False or len(links_data) < limit:
+                break
+        
+        if importados > 0:
+            messages.success(request, f'{importados} link(s) importado(s) com sucesso!')
+        if atualizados > 0:
+            messages.info(request, f'{atualizados} link(s) atualizado(s).')
+        if erros > 0:
+            messages.warning(request, f'{erros} erro(s) durante a importação.')
+        
+        return redirect('link_pagamento_list')
+    
+    # Estatísticas para exibir na página
+    links_locais = LinkPagamento.objects.count()
+    links_sincronizados = LinkPagamento.objects.filter(synced_with_asaas=True).count()
+    links_ativos = LinkPagamento.objects.filter(status='ACTIVE').count()
+    
+    context = {
+        'links_locais': links_locais,
+        'links_sincronizados': links_sincronizados,
+        'links_ativos': links_ativos,
+    }
+    
+    return render(request, 'links_pagamento/import.html', context)
+
+
+# ==================== LINK DE PAGAMENTO ====================
+
+@login_required(login_url='login')
+def recorrencia_criar_link(request, pk):
+    """
+    Cria um link de pagamento a partir de uma recorrência existente
+    """
+    recorrencia = get_object_or_404(Recorrencia, pk=pk)
+    
+    # Verifica se já existe um link para esta recorrência
+    link_existente = LinkPagamento.objects.filter(
+        cliente=recorrencia.cliente,
+        nome__icontains=recorrencia.description
+    ).first()
+    
+    if link_existente:
+        messages.info(request, f'Já existe um link de pagamento para esta recorrência. Redirecionando para a lista de links.')
+        return redirect('link_pagamento_list')
+    
+    # Cria o link de pagamento
+    link = criar_link_pagamento_recorrencia(recorrencia)
+    
+    if link:
+        messages.success(request, f'Link de pagamento criado com sucesso! Você pode visualizá-lo e copiar a URL abaixo.')
+        return redirect('link_pagamento_list')
+    else:
+        messages.error(request, 'Erro ao criar link de pagamento. Verifique os logs.')
+        return redirect('recorrencia_list')
+
+
+def criar_link_pagamento_recorrencia(recorrencia):
+    """
+    Cria automaticamente um link de pagamento quando uma recorrência é criada
+    
+    Args:
+        recorrencia: Objeto Recorrencia
+    """
+    try:
+        # Verifica se já existe um link para esta recorrência
+        link_existente = LinkPagamento.objects.filter(
+            cliente=recorrencia.cliente,
+            nome__icontains=recorrencia.description
+        ).first()
+        
+        if link_existente:
+            logger.info(f'Link de pagamento já existe para recorrência {recorrencia.asaas_id}')
+            return link_existente
+        
+        # Prepara dados do link de pagamento
+        asaas_service = AsaasService()
+        payment_link_data = {
+            'name': f"{recorrencia.description} - Recorrência",
+            'description': f"Link de pagamento para {recorrencia.description}",
+            'billingType': recorrencia.billing_type,
+            'chargeType': 'DETACHED',  # Mudado para DETACHED para evitar formulário
+            'value': float(recorrencia.value),
+            'dueDateLimitDays': 30,  # Prazo de vencimento em dias (obrigatório pela API)
+        }
+        
+        # IMPORTANTE: Adiciona cliente para ir direto ao pagamento sem formulário
+        if recorrencia.cliente.asaas_id:
+            payment_link_data['customer'] = recorrencia.cliente.asaas_id
+        else:
+            # Se cliente não tem asaas_id, sincroniza primeiro
+            logger.warning(f'Cliente {recorrencia.cliente.name} não tem asaas_id. Tentando sincronizar...')
+            customer_data = {
+                'name': recorrencia.cliente.name,
+                'cpfCnpj': recorrencia.cliente.cpfCnpj,
+                'email': recorrencia.cliente.email,
+                'mobilePhone': recorrencia.cliente.mobilePhone or recorrencia.cliente.phone,
+            }
+            customer_result = asaas_service.create_customer(customer_data)
+            if customer_result.get('success'):
+                recorrencia.cliente.asaas_id = customer_result['data']['id']
+                recorrencia.cliente.synced_with_asaas = True
+                recorrencia.cliente.save()
+                payment_link_data['customer'] = recorrencia.cliente.asaas_id
+                logger.info(f'Cliente {recorrencia.cliente.name} sincronizado com sucesso!')
+            else:
+                logger.error(f'Erro ao sincronizar cliente: {customer_result.get("error")}')
+        
+        # Cria o link no Asaas
+        result = asaas_service.create_payment_link(payment_link_data)
+        
+        if result.get('success'):
+            data = result['data']
+            
+            # Cria o link no banco local
+            link = LinkPagamento.objects.create(
+                nome=payment_link_data['name'],
+                descricao=payment_link_data['description'],
+                valor=recorrencia.value,
+                billing_type=recorrencia.billing_type,
+                charge_type='DETACHED',  # Mudado para DETACHED
+                cliente=recorrencia.cliente,
+                due_date_limit_days=payment_link_data.get('dueDateLimitDays', 30),
+                asaas_id=data.get('id'),
+                url=data.get('url'),
+                status=data.get('status', 'ACTIVE'),
+                synced_with_asaas=True,
+            )
+            
+            logger.info(f'Link de pagamento criado automaticamente para recorrência {recorrencia.asaas_id}: {link.url}')
+            return link
+        else:
+            logger.error(f'Erro ao criar link de pagamento para recorrência {recorrencia.asaas_id}: {result.get("error")}')
+            return None
+            
+    except Exception as e:
+        logger.error(f'Erro ao criar link de pagamento automaticamente: {str(e)}')
+        return None
+
+
+# ==================== WHATSAPP ====================
+
+def enviar_whatsapp_recorrencia(recorrencia):
+    """
+    Envia mensagem WhatsApp para o cliente quando uma recorrência é criada
+    
+    Args:
+        recorrencia: Objeto Recorrencia
+    """
+    # Verifica se o cliente tem telefone cadastrado
+    cliente = recorrencia.cliente
+    telefone = cliente.mobilePhone or cliente.phone
+    
+    if not telefone:
+        logger.warning(f'Cliente {cliente.name} não possui telefone cadastrado para envio de WhatsApp')
+        return
+    
+    # Busca o link de pagamento criado para esta recorrência
+    link_pagamento = LinkPagamento.objects.filter(
+        cliente=recorrencia.cliente,
+        nome__icontains=recorrencia.description
+    ).first()
+    
+    # Formata a mensagem
+    ciclo_nome = dict(Recorrencia.CYCLE_CHOICES).get(recorrencia.cycle, recorrencia.cycle)
+    forma_pagamento = dict(Recorrencia.BILLING_TYPE_CHOICES).get(recorrencia.billing_type, recorrencia.billing_type)
+    
+    mensagem = f"""Olá {cliente.name}! 👋
+
+Sua recorrência foi criada com sucesso! ✅
+
+📋 *Detalhes da Recorrência:*
+• Descrição: {recorrencia.description}
+• Valor: R$ {recorrencia.value:.2f}
+• Ciclo: {ciclo_nome}
+• Forma de Pagamento: {forma_pagamento}
+• Próximo Vencimento: {recorrencia.next_due_date.strftime('%d/%m/%Y')}
+"""
+    
+    if recorrencia.end_date:
+        mensagem += f"• Data de Término: {recorrencia.end_date.strftime('%d/%m/%Y')}\n"
+    
+    if recorrencia.max_payments:
+        mensagem += f"• Total de Cobranças: {recorrencia.max_payments}\n"
+    
+    # Adiciona link de pagamento se disponível
+    if link_pagamento and link_pagamento.url:
+        mensagem += f"""
+🔗 *Link de Pagamento:*
+{link_pagamento.url}
+
+💡 *Como usar:*
+Clique no link acima para realizar o pagamento da sua recorrência.
+"""
+    
+    mensagem += f"""
+📌 *Próximos Passos:*
+Fique atento ao vencimento para garantir o pagamento em dia.
+
+Em caso de dúvidas, entre em contato conosco.
+
+Atenciosamente,
+Equipe de Cobrança
+"""
+    
+    # Envia via WhatsApp para o cliente
+    whatsapp_service = WhatsAppService()
+    result = whatsapp_service.send_message(telefone, mensagem)
+    
+    if result.get('success'):
+        logger.info(f'Mensagem WhatsApp enviada para {cliente.name} ({telefone}) sobre recorrência {recorrencia.asaas_id}')
+    else:
+        logger.error(f'Erro ao enviar WhatsApp para {cliente.name}: {result.get("error")}')
+    
+    # Envia notificação para números configurados em WHATSAPP_NUMBERS
+    from django.conf import settings as django_settings
+    test_numbers = getattr(django_settings, 'WHATSAPP_NUMBERS', [])
+    if test_numbers:
+        notification_message = f"""🔔 *Nova Recorrência Criada*
+
+📋 *Detalhes:*
+• Cliente: {cliente.name}
+• Descrição: {recorrencia.description}
+• Valor: R$ {recorrencia.value:.2f}
+• Ciclo: {ciclo_nome}
+• Próximo Vencimento: {recorrencia.next_due_date.strftime('%d/%m/%Y')}
+"""
+        if link_pagamento and link_pagamento.url:
+            notification_message += f"• Link de Pagamento: {link_pagamento.url}\n"
+        
+        notification_message += f"""
+Sistema de Gestão Asaas
+"""
+        
+        for number in test_numbers:
+            number = number.strip()
+            if number:
+                result_notif = whatsapp_service.send_message(number, notification_message)
+                if result_notif.get('success'):
+                    logger.info(f'Notificação enviada para número de teste {number}')
+                else:
+                    logger.warning(f'Erro ao enviar notificação para {number}: {result_notif.get("error")}')
