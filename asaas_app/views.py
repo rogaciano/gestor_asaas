@@ -982,7 +982,9 @@ def import_movimentacoes(request):
         # Paginação: busca todas as páginas do período informado
         limit = 500
         offset = 0
+        pagina = 1
         while True:
+            logger.info(f'Buscando página {pagina} (offset={offset}, limit={limit})')
             result = asaas_service.get_financial_transactions(
                 limit=limit,
                 offset=offset,
@@ -995,8 +997,10 @@ def import_movimentacoes(request):
                 break
 
             transactions = result['data'].get('data', [])
+            logger.info(f'Página {pagina}: {len(transactions)} transações encontradas')
 
             if not transactions:
+                logger.info('Nenhuma transação encontrada, encerrando importação')
                 break
 
             for trans in transactions:
@@ -1055,9 +1059,11 @@ def import_movimentacoes(request):
 
             # Avança a janela de paginação
             offset += len(transactions)
+            pagina += 1
 
             # Se a API informar que não há mais páginas, encerra
             has_more = result['data'].get('hasMore')
+            logger.info(f'hasMore={has_more}, len(transactions)={len(transactions)}, limit={limit}')
             if has_more is False or len(transactions) < limit:
                 break
 
