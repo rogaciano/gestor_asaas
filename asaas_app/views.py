@@ -980,7 +980,8 @@ def import_movimentacoes(request):
         total_liquido_periodo = Decimal('0')
 
         # Paginação: busca todas as páginas do período informado
-        limit = 500
+        # API do Asaas retorna no máximo 100 transações por página
+        limit = 100
         offset = 0
         pagina = 1
         while True:
@@ -1064,7 +1065,10 @@ def import_movimentacoes(request):
             # Se a API informar que não há mais páginas, encerra
             has_more = result['data'].get('hasMore')
             logger.info(f'hasMore={has_more}, len(transactions)={len(transactions)}, limit={limit}')
-            if has_more is False or len(transactions) < limit:
+            
+            # Continua apenas se hasMore for True
+            if has_more is False:
+                logger.info('API informou hasMore=False, encerrando importação')
                 break
 
         if importadas > 0:
