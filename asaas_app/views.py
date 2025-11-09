@@ -1772,3 +1772,210 @@ Sistema de Gestão Asaas
                     logger.info(f'Notificação enviada para número de teste {number}')
                 else:
                     logger.warning(f'Erro ao enviar notificação para {number}: {result_notif.get("error")}')
+
+
+# ==================== LINKS DE PAGAMENTO INICIAL DA RECORRÊNCIA ====================
+
+@login_required(login_url='login')
+def recorrencia_link_primeira_cobranca(request, pk):
+    """
+    Opção 1: Gera link de pagamento da primeira cobrança da recorrência
+    """
+    recorrencia = get_object_or_404(Recorrencia, pk=pk)
+    
+    if not recorrencia.asaas_id:
+        messages.error(request, 'Esta recorrência não está sincronizada com o Asaas.')
+        return redirect('recorrencia_list')
+    
+    try:
+        asaas_service = AsaasService()
+        
+        # Buscar as cobranças da assinatura
+        result = asaas_service.list_subscription_payments(recorrencia.asaas_id, limit=1)
+        
+        if not result.get('success'):
+            messages.error(request, f'Erro ao buscar cobranças: {result.get("error")}')
+            return redirect('recorrencia_list')
+        
+        payments = result.get('data', [])
+        if not payments:
+            messages.warning(request, 'Nenhuma cobrança encontrada para esta recorrência.')
+            return redirect('recorrencia_list')
+        
+        # Pegar a primeira cobrança
+        first_payment = payments[0]
+        payment_id = first_payment.get('id')
+        
+        # Buscar detalhes da cobrança para pegar a URL
+        payment_details = asaas_service.get_payment(payment_id)
+        
+        if payment_details.get('success'):
+            data = payment_details['data']
+            invoice_url = data.get('invoiceUrl')
+            
+            if invoice_url:
+                messages.success(request, f'Link da primeira cobrança gerado com sucesso!')
+                # Redirecionar para a URL ou mostrar em uma modal
+                return redirect(invoice_url)
+            else:
+                messages.warning(request, 'URL de pagamento não disponível ainda.')
+        else:
+            messages.error(request, f'Erro ao buscar detalhes da cobrança: {payment_details.get("error")}')
+    
+    except Exception as e:
+        logger.error(f'Erro ao gerar link da primeira cobrança: {str(e)}')
+        messages.error(request, f'Erro ao gerar link: {str(e)}')
+    
+    return redirect('recorrencia_list')
+
+
+@login_required(login_url='login')
+def recorrencia_enviar_link_inicial_whatsapp(request, pk):
+    """
+    Opção 2: Envia link da primeira cobrança por WhatsApp
+    """
+    recorrencia = get_object_or_404(Recorrencia, pk=pk)
+    
+    if not recorrencia.asaas_id:
+        messages.error(request, 'Esta recorrência não está sincronizada com o Asaas.')
+        return redirect('recorrencia_list')
+    
+    if not recorrencia.cliente:
+        messages.error(request, 'Cliente não encontrado.')
+        return redirect('recorrencia_list')
+    
+    # Verificar se cliente tem telefone
+    phone = recorrencia.cliente.mobilePhone or recorrencia.cliente.phone
+    if not phone:
+        messages.error(request, 'Cliente não possui telefone cadastrado.')
+        return redirect('recorrencia_list')
+    
+    try:
+        asaas_service = AsaasService()
+        whatsapp_service = WhatsAppService()
+        
+        # Buscar primeira cobrança
+        result = asaas_service.list_subscription_payments(recorrencia.asaas_id, limit=1)
+        
+        if not result.get('success'):
+            messages.error(request, f'Erro ao buscar cobranças: {result.get("error")}')
+            return redirect('recorrencia_list')
+        
+        payments = result.get('data', [])
+        if not payments:
+            messages.warning(request, 'Nenhuma cobrança encontrada.')
+            return redirect('recorrencia_list')
+        
+        first_payment = payments[0]
+        payment_id = first_payment.get('id')
+        
+        # Buscar detalhes
+        payment_details = asaas_service.get_payment(payment_id)
+        
+        if not payment_details.get('success'):
+            messages.error(request, f'Erro ao buscar detalhes: {payment_details.get("error")}')
+            return redirect('recorrencia_list')
+        
+        data = payment_details['data']
+        invoice_url = data.get('invoiceUrl')
+        due_date = data.get('dueDate')
+        value = data.get('value')
+        
+        if not invoice_url:
+            messages.warning(request, 'URL de pagamento não disponível.')
+            return redirect('recorrencia_list')
+        
+        # Montar mensagem
+        message = f"""🔔 *Primeira Cobrança da sua Assinatura*
+
+Olá, {recorrencia.cliente.name}!
+
+📋 *Detalhes:*
+• Descrição: {recorrencia.description}
+• Valor: R$ {value:.2f}
+• Vencimento: {datetime.strptime(due_date, '%Y-%m-%d').strftime('%d/%m/%Y')}
+
+💳 *Link de Pagamento:*
+{invoice_url}
+
+Esta é a primeira cobrança da sua assinatura.
+
+_Sistema de Gestão Asaas_"""
+        
+        # Enviar WhatsApp
+        result_whats = whatsapp_service.send_message(phone, message)
+        
+        if result_whats.get('success'):
+            messages.success(request, f'Link enviado com sucesso para {phone}!')
+        else:
+            messages.error(request, f'Erro ao enviar WhatsApp: {result_whats.get("error")}')
+    
+    except Exception as e:
+        logger.error(f'Erro ao enviar link inicial: {str(e)}')
+        messages.error(request, f'Erro: {str(e)}')
+    
+    return redirect('recorrencia_list')
+
+
+@login_required(login_url='login')
+def recorrencia_checkout_assinatura(request, pk):
+    """
+    Opção 3: Cria um checkout de assinatura (link profissional do Asaas)
+    """
+    recorrencia = get_object_or_404(Recorrencia, pk=pk)
+    
+    if not recorrencia.asaas_id:
+        messages.error(request, 'Esta recorrência não está sincronizada com o Asaas.')
+        return redirect('recorrencia_list')
+    
+    try:
+        asaas_service = AsaasService()
+        
+        # Criar link de pagamento específico para esta assinatura
+        payment_link_data = {
+            'name': f"Checkout - {recorrencia.description}",
+            'description': f"Assinatura: {recorrencia.description}",
+            'billingType': recorrencia.billing_type,
+            'chargeType': 'RECURRENT',  # Tipo recorrente
+            'value': float(recorrencia.value),
+            'dueDateLimitDays': 30,
+        }
+        
+        # Adicionar cliente se existir
+        if recorrencia.cliente and recorrencia.cliente.asaas_id:
+            payment_link_data['customer'] = recorrencia.cliente.asaas_id
+        
+        # Criar link
+        result = asaas_service.create_payment_link(payment_link_data)
+        
+        if result.get('success'):
+            data = result['data']
+            checkout_url = data.get('url')
+            
+            # Salvar no banco
+            LinkPagamento.objects.create(
+                nome=payment_link_data['name'],
+                descricao=payment_link_data['description'],
+                valor=recorrencia.value,
+                billing_type=recorrencia.billing_type,
+                charge_type='RECURRENT',
+                cliente=recorrencia.cliente,
+                due_date_limit_days=30,
+                asaas_id=data.get('id'),
+                url=checkout_url,
+                status=data.get('status', 'ACTIVE'),
+                synced_with_asaas=True,
+            )
+            
+            messages.success(request, 'Checkout de assinatura criado com sucesso!')
+            
+            # Redirecionar para o checkout ou mostrar URL
+            return redirect(checkout_url)
+        else:
+            messages.error(request, f'Erro ao criar checkout: {result.get("error")}')
+    
+    except Exception as e:
+        logger.error(f'Erro ao criar checkout de assinatura: {str(e)}')
+        messages.error(request, f'Erro: {str(e)}')
+    
+    return redirect('recorrencia_list')

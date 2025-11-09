@@ -27,6 +27,9 @@ urlpatterns = [
     path('recorrencias/<int:pk>/boletos/', views.recorrencia_boletos, name='recorrencia_boletos'),
     path('recorrencias/<int:pk>/enviar-boleto-whatsapp/', views.recorrencia_enviar_boleto_whatsapp, name='recorrencia_enviar_boleto_whatsapp'),
     path('recorrencias/<int:pk>/enviar-link-whatsapp/', views.recorrencia_enviar_link_whatsapp, name='recorrencia_enviar_link_whatsapp'),
+    path('recorrencias/<int:pk>/link-primeira-cobranca/', views.recorrencia_link_primeira_cobranca, name='recorrencia_link_primeira_cobranca'),
+    path('recorrencias/<int:pk>/enviar-link-inicial-whatsapp/', views.recorrencia_enviar_link_inicial_whatsapp, name='recorrencia_enviar_link_inicial_whatsapp'),
+    path('recorrencias/<int:pk>/checkout-assinatura/', views.recorrencia_checkout_assinatura, name='recorrencia_checkout_assinatura'),
     path('recorrencias/importar/', views.import_recorrencias, name='import_recorrencias'),
     
     # Plano de Contas
