@@ -6,8 +6,14 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.db.models import Q, Sum, Count
 from django.db.models.functions import TruncMonth
-from .models import Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao, LinkPagamento
-from .forms import ClienteForm, RecorrenciaForm, PlanoContasForm, MovimentacaoForm, RegraCategorizacaoForm, LinkPagamentoForm
+from .models import (
+    Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao, LinkPagamento,
+    Parceiro, ConfiguracaoFinanceira, FechamentoMensal, ComissaoIndicador, ComissaoSocio
+)
+from .forms import (
+    ClienteForm, RecorrenciaForm, PlanoContasForm, MovimentacaoForm, RegraCategorizacaoForm,
+    LinkPagamentoForm, ParceiroForm, ConfiguracaoFinanceiraForm
+)
 from .services import AsaasService
 from .whatsapp_service import WhatsAppService
 from datetime import datetime, timedelta
@@ -1989,3 +1995,347 @@ def recorrencia_checkout_assinatura(request, pk):
         messages.error(request, f'Erro: {str(e)}')
     
     return redirect('recorrencia_list')
+
+
+# ==================== PARCEIROS ====================
+
+@login_required
+def parceiro_list(request):
+    """Lista de parceiros com filtro por tipo"""
+    tipo_filtro = request.GET.get('tipo', '')
+    parceiros = Parceiro.objects.all()
+    
+    if tipo_filtro:
+        parceiros = parceiros.filter(tipo=tipo_filtro)
+    
+    context = {
+        'parceiros': parceiros,
+        'tipo_filtro': tipo_filtro,
+        'total_indicadores': Parceiro.objects.filter(tipo='INDICADOR').count(),
+        'total_socios': Parceiro.objects.filter(tipo='SOCIO').count(),
+    }
+    return render(request, 'parceiros/list.html', context)
+
+
+@login_required
+def parceiro_create(request):
+    """Criar novo parceiro"""
+    if request.method == 'POST':
+        form = ParceiroForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Parceiro cadastrado com sucesso!')
+            return redirect('parceiro_list')
+    else:
+        form = ParceiroForm()
+    
+    return render(request, 'parceiros/form.html', {'form': form, 'titulo': 'Novo Parceiro'})
+
+
+@login_required
+def parceiro_edit(request, pk):
+    """Editar parceiro"""
+    parceiro = get_object_or_404(Parceiro, pk=pk)
+    
+    if request.method == 'POST':
+        form = ParceiroForm(request.POST, instance=parceiro)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Parceiro atualizado com sucesso!')
+            return redirect('parceiro_detail', pk=pk)
+    else:
+        form = ParceiroForm(instance=parceiro)
+    
+    return render(request, 'parceiros/form.html', {'form': form, 'titulo': 'Editar Parceiro', 'parceiro': parceiro})
+
+
+@login_required
+def parceiro_delete(request, pk):
+    """Deletar parceiro"""
+    parceiro = get_object_or_404(Parceiro, pk=pk)
+    
+    if request.method == 'POST':
+        parceiro.delete()
+        messages.success(request, 'Parceiro removido com sucesso!')
+        return redirect('parceiro_list')
+    
+    return render(request, 'parceiros/delete.html', {'parceiro': parceiro})
+
+
+@login_required
+def parceiro_detail(request, pk):
+    """Detalhes do parceiro"""
+    parceiro = get_object_or_404(Parceiro, pk=pk)
+    
+    context = {'parceiro': parceiro}
+    
+    if parceiro.tipo == 'INDICADOR':
+        clientes = Cliente.objects.filter(parceiro_indicador=parceiro)
+        comissoes = ComissaoIndicador.objects.filter(parceiro=parceiro)
+        total_comissoes = comissoes.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+        total_pendente = comissoes.filter(status='PENDENTE').aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+        context.update({
+            'clientes_indicados': clientes,
+            'comissoes': comissoes[:20],
+            'total_comissoes': total_comissoes,
+            'total_pendente': total_pendente,
+        })
+    else:
+        comissoes = ComissaoSocio.objects.filter(parceiro=parceiro)
+        total_comissoes = comissoes.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+        total_pendente = comissoes.filter(status='PENDENTE').aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+        context.update({
+            'comissoes': comissoes[:20],
+            'total_comissoes': total_comissoes,
+            'total_pendente': total_pendente,
+        })
+    
+    return render(request, 'parceiros/detail.html', context)
+
+
+# ==================== CONFIGURAÇÃO FINANCEIRA ====================
+
+@login_required
+def configuracao_financeira(request):
+    """Editar configurações financeiras"""
+    config = ConfiguracaoFinanceira.get_config()
+    
+    if request.method == 'POST':
+        form = ConfiguracaoFinanceiraForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Configurações financeiras atualizadas!')
+            return redirect('configuracao_financeira')
+    else:
+        form = ConfiguracaoFinanceiraForm(instance=config)
+    
+    return render(request, 'parceiros/configuracao_financeira.html', {'form': form, 'config': config})
+
+
+# ==================== FECHAMENTO MENSAL ====================
+
+@login_required
+def fechamento_mensal_list(request):
+    """Lista de fechamentos mensais"""
+    fechamentos = FechamentoMensal.objects.all()
+    return render(request, 'fechamentos/list.html', {'fechamentos': fechamentos})
+
+
+@login_required
+def fechamento_mensal_criar(request):
+    """Criar fechamento mensal - calcula comissões"""
+    if request.method == 'POST':
+        mes = int(request.POST.get('mes'))
+        ano = int(request.POST.get('ano'))
+        
+        if FechamentoMensal.objects.filter(mes=mes, ano=ano).exists():
+            messages.error(request, f'Já existe um fechamento para {mes:02d}/{ano}.')
+            return redirect('fechamento_mensal_list')
+        
+        try:
+            fechamento = _calcular_fechamento(mes, ano)
+            messages.success(request, f'Fechamento {mes:02d}/{ano} criado com sucesso!')
+            return redirect('fechamento_mensal_detail', pk=fechamento.pk)
+        except Exception as e:
+            logger.error(f'Erro ao criar fechamento: {str(e)}')
+            messages.error(request, f'Erro ao criar fechamento: {str(e)}')
+    
+    now = datetime.now()
+    context = {
+        'mes_atual': now.month,
+        'ano_atual': now.year,
+        'meses': [
+            (1, 'Janeiro'), (2, 'Fevereiro'), (3, 'Março'), (4, 'Abril'),
+            (5, 'Maio'), (6, 'Junho'), (7, 'Julho'), (8, 'Agosto'),
+            (9, 'Setembro'), (10, 'Outubro'), (11, 'Novembro'), (12, 'Dezembro'),
+        ],
+        'anos': list(range(now.year - 2, now.year + 1)),
+    }
+    return render(request, 'fechamentos/form.html', context)
+
+
+@login_required
+def fechamento_mensal_detail(request, pk):
+    """Detalhes do fechamento mensal"""
+    fechamento = get_object_or_404(FechamentoMensal, pk=pk)
+    comissoes_indicador = ComissaoIndicador.objects.filter(fechamento=fechamento).select_related('parceiro', 'cliente')
+    comissoes_socio = ComissaoSocio.objects.filter(fechamento=fechamento).select_related('parceiro')
+    
+    total_comissoes_indicador = comissoes_indicador.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+    total_comissoes_socio = comissoes_socio.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+    
+    context = {
+        'fechamento': fechamento,
+        'comissoes_indicador': comissoes_indicador,
+        'comissoes_socio': comissoes_socio,
+        'total_comissoes_indicador': total_comissoes_indicador,
+        'total_comissoes_socio': total_comissoes_socio,
+        'total_geral_comissoes': total_comissoes_indicador + total_comissoes_socio,
+    }
+    return render(request, 'fechamentos/detail.html', context)
+
+
+@login_required
+def fechamento_marcar_pago(request, pk):
+    """Marcar todas as comissões de um fechamento como pagas"""
+    fechamento = get_object_or_404(FechamentoMensal, pk=pk)
+    
+    if request.method == 'POST':
+        ComissaoIndicador.objects.filter(fechamento=fechamento, status='PENDENTE').update(status='PAGO')
+        ComissaoSocio.objects.filter(fechamento=fechamento, status='PENDENTE').update(status='PAGO')
+        fechamento.status = 'FECHADO'
+        fechamento.save()
+        messages.success(request, f'Comissões do fechamento {fechamento.mes:02d}/{fechamento.ano} marcadas como pagas!')
+    
+    return redirect('fechamento_mensal_detail', pk=pk)
+
+
+# ==================== LÓGICA DE CÁLCULO ====================
+
+def _calcular_fechamento(mes, ano):
+    """Calcula e cria o fechamento mensal com todas as comissões"""
+    from dateutil.relativedelta import relativedelta
+    
+    config = ConfiguracaoFinanceira.get_config()
+    
+    # 1. Buscar movimentações do mês
+    movimentacoes = Movimentacao.objects.filter(
+        data__month=mes, data__year=ano, status='CONFIRMED'
+    )
+    
+    # 2. Calcular receitas e despesas
+    total_receitas = movimentacoes.filter(tipo='PAYMENT').aggregate(
+        total=Sum('valor'))['total'] or Decimal('0.00')
+    
+    tipos_despesa = ['PAYMENT_FEE', 'TRANSFER_FEE', 'REFUND', 'CHARGEBACK', 'ANTICIPATION_FEE']
+    total_despesas = movimentacoes.filter(tipo__in=tipos_despesa).aggregate(
+        total=Sum('valor'))['total'] or Decimal('0.00')
+    total_despesas = abs(total_despesas)
+    
+    # 3. Resultado líquido
+    resultado_liquido = total_receitas - total_despesas
+    
+    # 4. Calcular reserva de caixa
+    meses_media = config.meses_media_reserva
+    percentual_seg = config.percentual_seguranca_reserva
+    
+    data_inicio = datetime(ano, mes, 1) - relativedelta(months=meses_media)
+    data_fim = datetime(ano, mes, 1) - relativedelta(days=1)
+    
+    despesas_anteriores = Movimentacao.objects.filter(
+        data__gte=data_inicio.date(),
+        data__lte=data_fim.date(),
+        status='CONFIRMED',
+        tipo__in=tipos_despesa
+    ).aggregate(total=Sum('valor'))['total'] or Decimal('0.00')
+    despesas_anteriores = abs(despesas_anteriores)
+    
+    media_despesas = despesas_anteriores / Decimal(str(meses_media)) if meses_media > 0 else Decimal('0.00')
+    valor_reserva = media_despesas * (1 + percentual_seg / Decimal('100'))
+    resultado_distribuivel = max(resultado_liquido - valor_reserva, Decimal('0.00'))
+    
+    # 5. Criar fechamento
+    fechamento = FechamentoMensal.objects.create(
+        mes=mes,
+        ano=ano,
+        total_receitas=total_receitas,
+        total_despesas=total_despesas,
+        resultado_liquido=resultado_liquido,
+        media_despesas_6m=media_despesas,
+        percentual_seguranca=percentual_seg,
+        valor_reserva=valor_reserva,
+        resultado_distribuivel=resultado_distribuivel,
+    )
+    
+    # 6. Comissões de indicadores
+    indicadores = Parceiro.objects.filter(tipo='INDICADOR', ativo=True)
+    for indicador in indicadores:
+        clientes_indicados = Cliente.objects.filter(parceiro_indicador=indicador)
+        
+        for cliente in clientes_indicados:
+            pagamentos_cliente = movimentacoes.filter(
+                tipo='PAYMENT', cliente=cliente
+            )
+            
+            for mov in pagamentos_cliente:
+                valor_comissao = mov.valor * indicador.percentual_comissao / Decimal('100')
+                ComissaoIndicador.objects.create(
+                    parceiro=indicador,
+                    cliente=cliente,
+                    movimentacao=mov,
+                    fechamento=fechamento,
+                    valor_pagamento=mov.valor,
+                    percentual=indicador.percentual_comissao,
+                    valor_comissao=valor_comissao,
+                    mes_referencia=mes,
+                    ano_referencia=ano,
+                )
+    
+    # 7. Comissões de sócios
+    socios = Parceiro.objects.filter(tipo='SOCIO', ativo=True)
+    for socio in socios:
+        if socio.majoritario:
+            base_calculo = resultado_distribuivel
+        else:
+            base_calculo = resultado_liquido
+        
+        valor_comissao = base_calculo * socio.percentual_comissao / Decimal('100')
+        valor_comissao = max(valor_comissao, Decimal('0.00'))
+        
+        ComissaoSocio.objects.create(
+            parceiro=socio,
+            fechamento=fechamento,
+            resultado_distribuivel=base_calculo,
+            percentual=socio.percentual_comissao,
+            valor_comissao=valor_comissao,
+        )
+    
+    return fechamento
+
+
+# ==================== DASHBOARD DO SÓCIO ====================
+
+@login_required
+def socio_dashboard(request):
+    """Dashboard do sócio - visão restrita"""
+    try:
+        parceiro = request.user.parceiro
+    except Parceiro.DoesNotExist:
+        messages.error(request, 'Seu usuário não está vinculado a nenhum parceiro.')
+        return redirect('home')
+    
+    if parceiro.tipo != 'SOCIO':
+        messages.error(request, 'Acesso restrito a sócios.')
+        return redirect('home')
+    
+    comissoes = ComissaoSocio.objects.filter(parceiro=parceiro).select_related('fechamento')
+    total_recebido = comissoes.filter(status='PAGO').aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+    total_pendente = comissoes.filter(status='PENDENTE').aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+    
+    context = {
+        'parceiro': parceiro,
+        'comissoes': comissoes,
+        'total_recebido': total_recebido,
+        'total_pendente': total_pendente,
+    }
+    return render(request, 'socio/dashboard.html', context)
+
+
+@login_required
+def socio_fechamento_detail(request, pk):
+    """Detalhe de fechamento - visão do sócio"""
+    try:
+        parceiro = request.user.parceiro
+    except Parceiro.DoesNotExist:
+        messages.error(request, 'Seu usuário não está vinculado a nenhum parceiro.')
+        return redirect('home')
+    
+    fechamento = get_object_or_404(FechamentoMensal, pk=pk)
+    comissao = get_object_or_404(ComissaoSocio, parceiro=parceiro, fechamento=fechamento)
+    
+    context = {
+        'parceiro': parceiro,
+        'fechamento': fechamento,
+        'comissao': comissao,
+    }
+    return render(request, 'socio/fechamento_detail.html', context)

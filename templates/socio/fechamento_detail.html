@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Fechamento {{ fechamento.mes|stringformat:"02d" }}/{{ fechamento.ano }} - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'socio_dashboard' %}" class="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para dashboard
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">Fechamento {{ fechamento.mes|stringformat:"02d" }}/{{ fechamento.ano }}</h1>
+</div>
+
+<!-- Resumo do Fechamento -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Receitas do Mês</p>
+        <p class="text-2xl font-semibold text-green-600">R$ {{ fechamento.total_receitas }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Despesas do Mês</p>
+        <p class="text-2xl font-semibold text-red-600">R$ {{ fechamento.total_despesas }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Resultado Líquido</p>
+        <p class="text-2xl font-semibold {% if fechamento.resultado_liquido >= 0 %}text-green-700{% else %}text-red-700{% endif %}">R$ {{ fechamento.resultado_liquido }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Resultado Distribuível</p>
+        <p class="text-2xl font-semibold text-blue-700">R$ {{ fechamento.resultado_distribuivel }}</p>
+    </div>
+</div>
+
+<!-- Minha Comissão -->
+<div class="bg-white shadow rounded-lg p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4"><i class="fas fa-receipt text-purple-500"></i> Minha Comissão</h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <p class="text-sm text-gray-500">Base de Cálculo</p>
+            <p class="text-lg font-medium text-gray-900">R$ {{ comissao.resultado_distribuivel }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Percentual</p>
+            <p class="text-lg font-medium text-gray-900">{{ comissao.percentual }}%</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Valor da Comissão</p>
+            <p class="text-lg font-semibold text-green-600">R$ {{ comissao.valor_comissao }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Status</p>
+            {% if comissao.status == 'PAGO' %}
+            <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                <i class="fas fa-check-circle mr-1"></i> Pago
+            </span>
+            {% else %}
+            <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                <i class="fas fa-clock mr-1"></i> Pendente
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Detalhes da Reserva -->
+<div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4"><i class="fas fa-shield-alt text-blue-500"></i> Reserva de Caixa</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <p class="text-sm text-gray-500">Média de Despesas</p>
+            <p class="text-lg font-medium text-gray-900">R$ {{ fechamento.media_despesas_6m }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">% Segurança</p>
+            <p class="text-lg font-medium text-gray-900">{{ fechamento.percentual_seguranca }}%</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Valor Reservado</p>
+            <p class="text-lg font-medium text-orange-600">R$ {{ fechamento.valor_reserva }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

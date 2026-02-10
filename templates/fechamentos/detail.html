@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Fechamento {{ fechamento.mes|stringformat:"02d" }}/{{ fechamento.ano }} - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'fechamento_mensal_list' %}" class="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para fechamentos
+    </a>
+    <div class="flex justify-between items-center mt-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Fechamento {{ fechamento.mes|stringformat:"02d" }}/{{ fechamento.ano }}</h1>
+            <p class="mt-1">
+                {% if fechamento.status == 'FECHADO' %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Fechado</span>
+                {% else %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Aberto</span>
+                {% endif %}
+            </p>
+        </div>
+        {% if fechamento.status == 'ABERTO' %}
+        <form method="post" action="{% url 'fechamento_marcar_pago' fechamento.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                onclick="return confirm('Marcar todas as comissões como pagas e fechar o período?')">
+                <i class="fas fa-check-double mr-2"></i> Marcar Tudo como Pago
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Resumo Financeiro -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Receitas</p>
+        <p class="text-2xl font-semibold text-green-600">R$ {{ fechamento.total_receitas }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Despesas</p>
+        <p class="text-2xl font-semibold text-red-600">R$ {{ fechamento.total_despesas }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Resultado Líquido</p>
+        <p class="text-2xl font-semibold {% if fechamento.resultado_liquido >= 0 %}text-green-700{% else %}text-red-700{% endif %}">R$ {{ fechamento.resultado_liquido }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+        <p class="text-sm text-gray-500">Resultado Distribuível</p>
+        <p class="text-2xl font-semibold text-blue-700">R$ {{ fechamento.resultado_distribuivel }}</p>
+    </div>
+</div>
+
+<!-- Detalhes da Reserva -->
+<div class="bg-white shadow rounded-lg p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4"><i class="fas fa-shield-alt text-blue-500"></i> Reserva de Caixa</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <p class="text-sm text-gray-500">Média de Despesas</p>
+            <p class="text-lg font-medium text-gray-900">R$ {{ fechamento.media_despesas_6m }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">% Segurança Aplicado</p>
+            <p class="text-lg font-medium text-gray-900">{{ fechamento.percentual_seguranca }}%</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Valor da Reserva</p>
+            <p class="text-lg font-semibold text-orange-600">R$ {{ fechamento.valor_reserva }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Total de Comissões -->
+<div class="bg-white shadow rounded-lg p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4"><i class="fas fa-coins text-yellow-500"></i> Resumo de Comissões</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <p class="text-sm text-gray-500">Comissões Indicadores</p>
+            <p class="text-lg font-medium text-green-600">R$ {{ total_comissoes_indicador }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Comissões Sócios</p>
+            <p class="text-lg font-medium text-purple-600">R$ {{ total_comissoes_socio }}</p>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Total Geral</p>
+            <p class="text-lg font-semibold text-gray-900">R$ {{ total_geral_comissoes }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Comissões de Indicadores -->
+{% if comissoes_indicador %}
+<div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900"><i class="fas fa-handshake text-green-500"></i> Comissões de Indicadores</h2>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parceiro</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Pago</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">%</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comissão</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for c in comissoes_indicador %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ c.parceiro.nome }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">{{ c.cliente.name }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">R$ {{ c.valor_pagamento }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ c.percentual }}%</td>
+                <td class="px-6 py-4 text-sm font-medium text-green-600">R$ {{ c.valor_comissao }}</td>
+                <td class="px-6 py-4 text-sm">
+                    {% if c.status == 'PAGO' %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Pago</span>
+                    {% else %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pendente</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Comissões de Sócios -->
+{% if comissoes_socio %}
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900"><i class="fas fa-user-tie text-purple-500"></i> Comissões de Sócios</h2>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sócio</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Majoritário</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Base de Cálculo</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">%</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comissão</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for c in comissoes_socio %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ c.parceiro.nome }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    {% if c.parceiro.majoritario %}
+                    <i class="fas fa-check-circle text-green-500"></i> Sim
+                    {% else %}
+                    <i class="fas fa-times-circle text-gray-400"></i> Não
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">R$ {{ c.resultado_distribuivel }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ c.percentual }}%</td>
+                <td class="px-6 py-4 text-sm font-medium text-purple-600">R$ {{ c.valor_comissao }}</td>
+                <td class="px-6 py-4 text-sm">
+                    {% if c.status == 'PAGO' %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Pago</span>
+                    {% else %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pendente</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

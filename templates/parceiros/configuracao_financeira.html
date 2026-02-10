@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuração Financeira - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'parceiro_list' %}" class="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para parceiros
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">Configuração Financeira</h1>
+    <p class="mt-2 text-gray-600">Defina os parâmetros da reserva de caixa para cálculo de comissões</p>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-shield-alt text-blue-500"></i> Reserva de Caixa
+            </h2>
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                <p class="text-sm text-blue-700">
+                    A reserva de caixa é calculada como a <strong>média das despesas dos últimos N meses</strong> 
+                    acrescida de um <strong>percentual de segurança</strong>. O resultado distribuível para sócios 
+                    majoritários será o resultado líquido menos essa reserva.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="id_meses_media_reserva" class="block text-sm font-medium text-gray-700 mb-2">
+                        Meses para Cálculo da Média *
+                    </label>
+                    {{ form.meses_media_reserva }}
+                    {% if form.meses_media_reserva.errors %}<p class="mt-1 text-sm text-red-600">{{ form.meses_media_reserva.errors.0 }}</p>{% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Quantidade de meses anteriores para calcular a média de despesas</p>
+                </div>
+                <div>
+                    <label for="id_percentual_seguranca_reserva" class="block text-sm font-medium text-gray-700 mb-2">
+                        % de Segurança Adicional *
+                    </label>
+                    {{ form.percentual_seguranca_reserva }}
+                    {% if form.percentual_seguranca_reserva.errors %}<p class="mt-1 text-sm text-red-600">{{ form.percentual_seguranca_reserva.errors.0 }}</p>{% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Percentual acrescido sobre a média (ex: 10% = reserva é 110% da média)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-calculator mr-1"></i> Exemplo de Cálculo</h3>
+            <p class="text-sm text-gray-600">
+                Se a média de despesas dos últimos <strong>{{ config.meses_media_reserva }} meses</strong> for R$ 10.000,00,
+                com <strong>{{ config.percentual_seguranca_reserva }}%</strong> de segurança:<br>
+                <strong>Reserva = R$ 10.000 × (1 + {{ config.percentual_seguranca_reserva }}%) = R$ {% widthratio config.percentual_seguranca_reserva 100 10000 as reserva_extra %}{{ reserva_extra|default:"11.000" }},00</strong>
+            </p>
+        </div>
+
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'parceiro_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-times mr-2"></i> Cancelar
+            </a>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-save mr-2"></i> Salvar Configurações
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

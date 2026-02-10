@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Parceiro - Asaas Manager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{% url 'parceiro_list' %}" class="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i> Voltar para lista
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900 mt-4">Excluir Parceiro</h1>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="mb-6">
+        <div class="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mx-auto">
+            <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+        </div>
+        <h2 class="mt-4 text-xl font-semibold text-center text-gray-900">
+            Tem certeza que deseja excluir este parceiro?
+        </h2>
+        <p class="mt-2 text-center text-gray-600">Esta ação não pode ser desfeita.</p>
+    </div>
+    
+    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+        <dl class="space-y-2">
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Nome:</dt>
+                <dd class="text-sm text-gray-900">{{ parceiro.nome }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">CPF/CNPJ:</dt>
+                <dd class="text-sm text-gray-900">{{ parceiro.cpfCnpj }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Tipo:</dt>
+                <dd class="text-sm text-gray-900">{{ parceiro.get_tipo_display }}</dd>
+            </div>
+            <div class="flex justify-between">
+                <dt class="text-sm font-medium text-gray-500">Comissão:</dt>
+                <dd class="text-sm text-gray-900">{{ parceiro.percentual_comissao }}%</dd>
+            </div>
+        </dl>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'parceiro_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <i class="fas fa-times mr-2"></i> Cancelar
+            </a>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                <i class="fas fa-trash mr-2"></i> Sim, Excluir
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

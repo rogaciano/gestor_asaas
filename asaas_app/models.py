@@ -1,4 +1,80 @@
 from django.db import models
+from django.contrib.auth.models import User
+
+
+class ConfiguracaoFinanceira(models.Model):
+    """Configurações financeiras globais (singleton - apenas 1 registro)"""
+    
+    percentual_seguranca_reserva = models.DecimalField(
+        '% Segurança da Reserva', max_digits=5, decimal_places=2, default=10.00,
+        help_text='Percentual adicional sobre a média de despesas para reserva de caixa'
+    )
+    meses_media_reserva = models.IntegerField(
+        'Meses para Média', default=6,
+        help_text='Quantidade de meses anteriores para calcular a média de despesas'
+    )
+    
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Configuração Financeira'
+        verbose_name_plural = 'Configurações Financeiras'
+    
+    def __str__(self):
+        return f"Reserva: {self.percentual_seguranca_reserva}% sobre média de {self.meses_media_reserva} meses"
+    
+    def save(self, *args, **kwargs):
+        if not self.pk and ConfiguracaoFinanceira.objects.exists():
+            raise ValueError('Já existe uma configuração financeira. Edite a existente.')
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_config(cls):
+        config, _ = cls.objects.get_or_create(pk=1)
+        return config
+
+
+class Parceiro(models.Model):
+    """Modelo para parceiros (indicadores e sócios)"""
+    
+    TIPO_CHOICES = [
+        ('INDICADOR', 'Indicador'),
+        ('SOCIO', 'Sócio'),
+    ]
+    
+    nome = models.CharField('Nome', max_length=255)
+    cpfCnpj = models.CharField('CPF/CNPJ', max_length=18, unique=True)
+    email = models.EmailField('E-mail')
+    telefone = models.CharField('Telefone', max_length=20, blank=True, null=True)
+    
+    tipo = models.CharField('Tipo', max_length=20, choices=TIPO_CHOICES)
+    percentual_comissao = models.DecimalField(
+        '% Comissão', max_digits=5, decimal_places=2,
+        help_text='Percentual de comissão (ex: 10.00 = 10%)'
+    )
+    majoritario = models.BooleanField(
+        'Majoritário', default=False,
+        help_text='Sócios majoritários têm comissão calculada sobre resultado distribuível (após reserva de caixa)'
+    )
+    ativo = models.BooleanField('Ativo', default=True)
+    
+    user = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='parceiro', verbose_name='Usuário do Sistema',
+        help_text='Apenas sócios precisam de login'
+    )
+    
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Parceiro'
+        verbose_name_plural = 'Parceiros'
+        ordering = ['tipo', 'nome']
+    
+    def __str__(self):
+        return f"{self.nome} ({self.get_tipo_display()}) - {self.percentual_comissao}%"
 
 
 class Cliente(models.Model):
@@ -18,6 +94,14 @@ class Cliente(models.Model):
     province = models.CharField('Bairro', max_length=100, blank=True, null=True)
     postalCode = models.CharField('CEP', max_length=9, blank=True, null=True)
     observations = models.TextField('Observações', blank=True, null=True, help_text='Id do cliente no TalkIAChat')
+    
+    # Parceiro indicador (opcional)
+    parceiro_indicador = models.ForeignKey(
+        Parceiro, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='clientes_indicados', verbose_name='Parceiro Indicador',
+        help_text='Parceiro que indicou este cliente (opcional)',
+        limit_choices_to={'tipo': 'INDICADOR', 'ativo': True}
+    )
     
     # Campos de controle
     asaas_id = models.CharField('ID Asaas', max_length=50, blank=True, null=True, unique=True)
@@ -317,3 +401,119 @@ class LinkPagamento(models.Model):
     
     def __str__(self):
         return f"{self.nome} - {'R$ ' + str(self.valor) if self.valor else 'Valor Livre'}"
+
+
+class FechamentoMensal(models.Model):
+    """Modelo para fechamento/apuração mensal de comissões"""
+    
+    STATUS_CHOICES = [
+        ('ABERTO', 'Aberto'),
+        ('FECHADO', 'Fechado'),
+    ]
+    
+    mes = models.IntegerField('Mês')
+    ano = models.IntegerField('Ano')
+    
+    total_receitas = models.DecimalField('Total de Receitas', max_digits=12, decimal_places=2, default=0)
+    total_despesas = models.DecimalField('Total de Despesas', max_digits=12, decimal_places=2, default=0)
+    resultado_liquido = models.DecimalField('Resultado Líquido', max_digits=12, decimal_places=2, default=0)
+    
+    media_despesas_6m = models.DecimalField(
+        'Média Despesas (últimos meses)', max_digits=12, decimal_places=2, default=0,
+        help_text='Média das despesas dos últimos N meses'
+    )
+    percentual_seguranca = models.DecimalField(
+        '% Segurança Usado', max_digits=5, decimal_places=2, default=10.00,
+        help_text='Percentual de segurança aplicado no cálculo da reserva'
+    )
+    valor_reserva = models.DecimalField(
+        'Valor da Reserva', max_digits=12, decimal_places=2, default=0,
+        help_text='Valor reservado para caixa (média × (1 + %segurança))'
+    )
+    resultado_distribuivel = models.DecimalField(
+        'Resultado Distribuível', max_digits=12, decimal_places=2, default=0,
+        help_text='Resultado líquido - reserva (mínimo 0)'
+    )
+    
+    status = models.CharField('Status', max_length=20, choices=STATUS_CHOICES, default='ABERTO')
+    
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Fechamento Mensal'
+        verbose_name_plural = 'Fechamentos Mensais'
+        ordering = ['-ano', '-mes']
+        unique_together = ['mes', 'ano']
+    
+    def __str__(self):
+        return f"Fechamento {self.mes:02d}/{self.ano} - {self.get_status_display()}"
+
+
+class ComissaoIndicador(models.Model):
+    """Comissões de parceiros indicadores por pagamento de clientes indicados"""
+    
+    STATUS_CHOICES = [
+        ('PENDENTE', 'Pendente'),
+        ('PAGO', 'Pago'),
+    ]
+    
+    parceiro = models.ForeignKey(Parceiro, on_delete=models.CASCADE, related_name='comissoes_indicador', verbose_name='Parceiro')
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='comissoes_indicador', verbose_name='Cliente')
+    movimentacao = models.ForeignKey(
+        'Movimentacao', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='comissoes_indicador', verbose_name='Movimentação'
+    )
+    fechamento = models.ForeignKey(
+        FechamentoMensal, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='comissoes_indicador', verbose_name='Fechamento'
+    )
+    
+    valor_pagamento = models.DecimalField('Valor do Pagamento', max_digits=10, decimal_places=2)
+    percentual = models.DecimalField('% Comissão', max_digits=5, decimal_places=2)
+    valor_comissao = models.DecimalField('Valor da Comissão', max_digits=10, decimal_places=2)
+    
+    mes_referencia = models.IntegerField('Mês Referência')
+    ano_referencia = models.IntegerField('Ano Referência')
+    
+    status = models.CharField('Status', max_length=20, choices=STATUS_CHOICES, default='PENDENTE')
+    
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Comissão de Indicador'
+        verbose_name_plural = 'Comissões de Indicadores'
+        ordering = ['-ano_referencia', '-mes_referencia']
+    
+    def __str__(self):
+        return f"{self.parceiro.nome} - {self.cliente.name} - R$ {self.valor_comissao}"
+
+
+class ComissaoSocio(models.Model):
+    """Comissões de sócios sobre resultado distribuível"""
+    
+    STATUS_CHOICES = [
+        ('PENDENTE', 'Pendente'),
+        ('PAGO', 'Pago'),
+    ]
+    
+    parceiro = models.ForeignKey(Parceiro, on_delete=models.CASCADE, related_name='comissoes_socio', verbose_name='Sócio')
+    fechamento = models.ForeignKey(FechamentoMensal, on_delete=models.CASCADE, related_name='comissoes_socio', verbose_name='Fechamento')
+    
+    resultado_distribuivel = models.DecimalField('Resultado Distribuível', max_digits=12, decimal_places=2)
+    percentual = models.DecimalField('% Comissão', max_digits=5, decimal_places=2)
+    valor_comissao = models.DecimalField('Valor da Comissão', max_digits=10, decimal_places=2)
+    
+    status = models.CharField('Status', max_length=20, choices=STATUS_CHOICES, default='PENDENTE')
+    
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Comissão de Sócio'
+        verbose_name_plural = 'Comissões de Sócios'
+        ordering = ['-fechamento__ano', '-fechamento__mes']
+    
+    def __str__(self):
+        return f"{self.parceiro.nome} - R$ {self.valor_comissao} ({self.fechamento})"

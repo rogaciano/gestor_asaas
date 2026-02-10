@@ -65,5 +65,25 @@ urlpatterns = [
     path('links-pagamento/<int:pk>/deletar/', views.link_pagamento_delete, name='link_pagamento_delete'),
     path('links-pagamento/<int:pk>/sincronizar/', views.link_pagamento_sync, name='link_pagamento_sync'),
     path('links-pagamento/importar/', views.import_link_pagamento, name='import_link_pagamento'),
+    
+    # Parceiros
+    path('parceiros/', views.parceiro_list, name='parceiro_list'),
+    path('parceiros/novo/', views.parceiro_create, name='parceiro_create'),
+    path('parceiros/<int:pk>/editar/', views.parceiro_edit, name='parceiro_edit'),
+    path('parceiros/<int:pk>/deletar/', views.parceiro_delete, name='parceiro_delete'),
+    path('parceiros/<int:pk>/', views.parceiro_detail, name='parceiro_detail'),
+    
+    # Configuração Financeira
+    path('parceiros/configuracao/', views.configuracao_financeira, name='configuracao_financeira'),
+    
+    # Fechamentos Mensais
+    path('fechamentos/', views.fechamento_mensal_list, name='fechamento_mensal_list'),
+    path('fechamentos/novo/', views.fechamento_mensal_criar, name='fechamento_mensal_criar'),
+    path('fechamentos/<int:pk>/', views.fechamento_mensal_detail, name='fechamento_mensal_detail'),
+    path('fechamentos/<int:pk>/marcar-pago/', views.fechamento_marcar_pago, name='fechamento_marcar_pago'),
+    
+    # Dashboard do Sócio
+    path('socio/', views.socio_dashboard, name='socio_dashboard'),
+    path('socio/fechamento/<int:pk>/', views.socio_fechamento_detail, name='socio_fechamento_detail'),
 ]
 

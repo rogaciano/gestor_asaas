@@ -42,6 +42,28 @@
                             <i class="fas fa-link mr-2"></i> Links de Pagamento
                         </a>
                         
+                        <!-- Parceiros Dropdown -->
+                        <div class="relative flex" x-data="{ openParceiros: false }">
+                            <button @click="openParceiros = !openParceiros" class="{% if 'parceiro' in request.path or 'fechamento' in request.path %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                <i class="fas fa-handshake mr-2"></i> Parceiros
+                                <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                            </button>
+                            <div x-show="openParceiros" @click.away="openParceiros = false" x-transition class="origin-top-left absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="py-1">
+                                    <a href="{% url 'parceiro_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-users mr-2 text-blue-600"></i> Parceiros
+                                    </a>
+                                    <a href="{% url 'fechamento_mensal_list' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-calendar-check mr-2 text-green-600"></i> Fechamentos Mensais
+                                    </a>
+                                    <div class="border-t border-gray-100"></div>
+                                    <a href="{% url 'configuracao_financeira' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-cog mr-2 text-gray-600"></i> Configuração Financeira
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Financeiro Dropdown -->
                         <div class="relative flex" x-data="{ openFinanceiro: false }">
                             <button @click="openFinanceiro = !openFinanceiro" class="{% if 'financeiro' in request.path %}border-blue-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">

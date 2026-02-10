@@ -1,5 +1,8 @@
 from django import forms
-from .models import Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao, LinkPagamento
+from .models import (
+    Cliente, Recorrencia, PlanoContas, Movimentacao, RegraCategorizacao, 
+    LinkPagamento, Parceiro, ConfiguracaoFinanceira
+)
 
 
 class ClienteForm(forms.ModelForm):
@@ -9,7 +12,8 @@ class ClienteForm(forms.ModelForm):
         model = Cliente
         fields = [
             'name', 'cpfCnpj', 'email', 'phone', 'mobilePhone',
-            'address', 'addressNumber', 'complement', 'province', 'postalCode', 'observations'
+            'address', 'addressNumber', 'complement', 'province', 'postalCode', 'observations',
+            'parceiro_indicador'
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -60,6 +64,9 @@ class ClienteForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                 'placeholder': 'Id do cliente no TalkIAChat',
                 'rows': 4
+            }),
+            'parceiro_indicador': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             }),
         }
 
@@ -266,8 +273,68 @@ class LinkPagamentoForm(forms.ModelForm):
                 'placeholder': 'Apenas para cobrança parcelada',
                 'min': '1'
             }),
-            'cliente': forms.Select(attrs={
+        }
+
+
+class ParceiroForm(forms.ModelForm):
+    """Formulário para cadastro de parceiros"""
+    
+    class Meta:
+        model = Parceiro
+        fields = ['nome', 'cpfCnpj', 'email', 'telefone', 'tipo', 'percentual_comissao', 'majoritario', 'ativo']
+        widgets = {
+            'nome': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Nome completo do parceiro'
+            }),
+            'cpfCnpj': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': '000.000.000-00 ou 00.000.000/0000-00'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'email@exemplo.com'
+            }),
+            'telefone': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': '(00) 00000-0000'
+            }),
+            'tipo': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            }),
+            'percentual_comissao': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Ex: 10.00 para 10%',
+                'step': '0.01',
+                'min': '0',
+                'max': '100'
+            }),
+            'majoritario': forms.CheckboxInput(attrs={
+                'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+            }),
+            'ativo': forms.CheckboxInput(attrs={
+                'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'
             }),
         }
 
+
+class ConfiguracaoFinanceiraForm(forms.ModelForm):
+    """Formulário para configurações financeiras"""
+    
+    class Meta:
+        model = ConfiguracaoFinanceira
+        fields = ['percentual_seguranca_reserva', 'meses_media_reserva']
+        widgets = {
+            'percentual_seguranca_reserva': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Ex: 10.00 para 10%',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'meses_media_reserva': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'placeholder': 'Ex: 6',
+                'min': '1',
+                'max': '24'
+            }),
+        }
