@@ -2123,18 +2123,23 @@ def fechamento_mensal_list(request):
 
 @login_required
 def fechamento_mensal_criar(request):
-    """Criar fechamento mensal - calcula comissões"""
+    """Criar fechamento mensal - calcula comissões (prévia)"""
     if request.method == 'POST':
         mes = int(request.POST.get('mes'))
         ano = int(request.POST.get('ano'))
         
-        if FechamentoMensal.objects.filter(mes=mes, ano=ano).exists():
-            messages.error(request, f'Já existe um fechamento para {mes:02d}/{ano}.')
-            return redirect('fechamento_mensal_list')
+        existente = FechamentoMensal.objects.filter(mes=mes, ano=ano).first()
+        if existente:
+            if existente.status == 'PREVIO':
+                messages.info(request, f'Já existe uma prévia para {mes:02d}/{ano}. Use o botão Recalcular para atualizar.')
+                return redirect('fechamento_mensal_detail', pk=existente.pk)
+            else:
+                messages.error(request, f'Já existe um fechamento finalizado para {mes:02d}/{ano}.')
+                return redirect('fechamento_mensal_list')
         
         try:
             fechamento = _calcular_fechamento(mes, ano)
-            messages.success(request, f'Fechamento {mes:02d}/{ano} criado com sucesso!')
+            messages.success(request, f'Prévia do fechamento {mes:02d}/{ano} gerada com sucesso!')
             return redirect('fechamento_mensal_detail', pk=fechamento.pk)
         except Exception as e:
             logger.error(f'Erro ao criar fechamento: {str(e)}')
@@ -2176,9 +2181,55 @@ def fechamento_mensal_detail(request, pk):
 
 
 @login_required
+def fechamento_recalcular(request, pk):
+    """Recalcular uma prévia de fechamento mensal"""
+    fechamento = get_object_or_404(FechamentoMensal, pk=pk)
+    
+    if fechamento.status != 'PREVIO':
+        messages.error(request, 'Apenas fechamentos em prévia podem ser recalculados.')
+        return redirect('fechamento_mensal_detail', pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            ComissaoIndicador.objects.filter(fechamento=fechamento).delete()
+            ComissaoSocio.objects.filter(fechamento=fechamento).delete()
+            fechamento.delete()
+            
+            novo_fechamento = _calcular_fechamento(fechamento.mes, fechamento.ano)
+            messages.success(request, f'Prévia {novo_fechamento.mes:02d}/{novo_fechamento.ano} recalculada com sucesso!')
+            return redirect('fechamento_mensal_detail', pk=novo_fechamento.pk)
+        except Exception as e:
+            logger.error(f'Erro ao recalcular fechamento: {str(e)}')
+            messages.error(request, f'Erro ao recalcular: {str(e)}')
+    
+    return redirect('fechamento_mensal_detail', pk=pk)
+
+
+@login_required
+def fechamento_finalizar(request, pk):
+    """Finalizar uma prévia, transformando em fechamento aberto"""
+    fechamento = get_object_or_404(FechamentoMensal, pk=pk)
+    
+    if fechamento.status != 'PREVIO':
+        messages.error(request, 'Apenas fechamentos em prévia podem ser finalizados.')
+        return redirect('fechamento_mensal_detail', pk=pk)
+    
+    if request.method == 'POST':
+        fechamento.status = 'ABERTO'
+        fechamento.save()
+        messages.success(request, f'Fechamento {fechamento.mes:02d}/{fechamento.ano} finalizado! Comissões pendentes de pagamento.')
+    
+    return redirect('fechamento_mensal_detail', pk=pk)
+
+
+@login_required
 def fechamento_marcar_pago(request, pk):
     """Marcar todas as comissões de um fechamento como pagas"""
     fechamento = get_object_or_404(FechamentoMensal, pk=pk)
+    
+    if fechamento.status != 'ABERTO':
+        messages.error(request, 'Apenas fechamentos abertos podem ser marcados como pagos.')
+        return redirect('fechamento_mensal_detail', pk=pk)
     
     if request.method == 'POST':
         ComissaoIndicador.objects.filter(fechamento=fechamento, status='PENDENTE').update(status='PAGO')

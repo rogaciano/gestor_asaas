@@ -407,6 +407,7 @@ class FechamentoMensal(models.Model):
     """Modelo para fechamento/apuração mensal de comissões"""
     
     STATUS_CHOICES = [
+        ('PREVIO', 'Prévia'),
         ('ABERTO', 'Aberto'),
         ('FECHADO', 'Fechado'),
     ]
@@ -435,7 +436,7 @@ class FechamentoMensal(models.Model):
         help_text='Resultado líquido - reserva (mínimo 0)'
     )
     
-    status = models.CharField('Status', max_length=20, choices=STATUS_CHOICES, default='ABERTO')
+    status = models.CharField('Status', max_length=20, choices=STATUS_CHOICES, default='PREVIO')
     
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)

@@ -40,8 +40,10 @@
                 <td class="px-6 py-4 text-sm">
                     {% if f.status == 'FECHADO' %}
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Fechado</span>
-                    {% else %}
+                    {% elif f.status == 'ABERTO' %}
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Aberto</span>
+                    {% else %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Prévia</span>
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 text-right text-sm">

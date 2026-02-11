@@ -80,6 +80,8 @@ urlpatterns = [
     path('fechamentos/', views.fechamento_mensal_list, name='fechamento_mensal_list'),
     path('fechamentos/novo/', views.fechamento_mensal_criar, name='fechamento_mensal_criar'),
     path('fechamentos/<int:pk>/', views.fechamento_mensal_detail, name='fechamento_mensal_detail'),
+    path('fechamentos/<int:pk>/recalcular/', views.fechamento_recalcular, name='fechamento_recalcular'),
+    path('fechamentos/<int:pk>/finalizar/', views.fechamento_finalizar, name='fechamento_finalizar'),
     path('fechamentos/<int:pk>/marcar-pago/', views.fechamento_marcar_pago, name='fechamento_marcar_pago'),
     
     # Dashboard do Sócio
