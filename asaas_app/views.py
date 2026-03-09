@@ -2257,11 +2257,12 @@ def _calcular_fechamento(mes, ano):
     )
     
     # 2. Calcular receitas e despesas
-    total_receitas = movimentacoes.filter(tipo='PAYMENT').aggregate(
+    # Receitas: valores positivos (pagamentos recebidos)
+    total_receitas = movimentacoes.filter(valor__gt=0).aggregate(
         total=Sum('valor'))['total'] or Decimal('0.00')
     
-    tipos_despesa = ['PAYMENT_FEE', 'TRANSFER_FEE', 'REFUND', 'CHARGEBACK', 'ANTICIPATION_FEE']
-    total_despesas = movimentacoes.filter(tipo__in=tipos_despesa).aggregate(
+    # Despesas: valores negativos (taxas, transferências, etc)
+    total_despesas = movimentacoes.filter(valor__lt=0).aggregate(
         total=Sum('valor'))['total'] or Decimal('0.00')
     total_despesas = abs(total_despesas)
     
@@ -2279,7 +2280,7 @@ def _calcular_fechamento(mes, ano):
         data__gte=data_inicio.date(),
         data__lte=data_fim.date(),
         status='CONFIRMED',
-        tipo__in=tipos_despesa
+        valor__lt=0
     ).aggregate(total=Sum('valor'))['total'] or Decimal('0.00')
     despesas_anteriores = abs(despesas_anteriores)
     
@@ -2311,7 +2312,7 @@ def _calcular_fechamento(mes, ano):
             )
             
             for mov in pagamentos_cliente:
-                valor_comissao = mov.valor * indicador.percentual_comissao / Decimal('100')
+                valor_comissao = round(mov.valor * indicador.percentual_comissao / Decimal('100'), 2)
                 ComissaoIndicador.objects.create(
                     parceiro=indicador,
                     cliente=cliente,
@@ -2333,7 +2334,7 @@ def _calcular_fechamento(mes, ano):
             base_calculo = resultado_liquido
         
         valor_comissao = base_calculo * socio.percentual_comissao / Decimal('100')
-        valor_comissao = max(valor_comissao, Decimal('0.00'))
+        valor_comissao = round(max(valor_comissao, Decimal('0.00')), 2)
         
         ComissaoSocio.objects.create(
             parceiro=socio,
