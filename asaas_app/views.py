@@ -1021,7 +1021,9 @@ def import_movimentacoes(request):
                     # Mapeia o tipo de transação
                     tipo_map = {
                         'PAYMENT': 'PAYMENT',
+                        'PAYMENT_RECEIVED': 'PAYMENT',
                         'PAYMENT_FEE': 'PAYMENT_FEE',
+                        'PAYMENT_MESSAGING_NOTIFICATION_FEE': 'PAYMENT_FEE',
                         'TRANSFER': 'TRANSFER',
                         'TRANSFER_FEE': 'TRANSFER_FEE',
                         'REFUND': 'REFUND',
@@ -2282,7 +2284,7 @@ def _calcular_fechamento(mes, ano):
     despesas_anteriores = abs(despesas_anteriores)
     
     media_despesas = despesas_anteriores / Decimal(str(meses_media)) if meses_media > 0 else Decimal('0.00')
-    valor_reserva = media_despesas * (1 + percentual_seg / Decimal('100'))
+    valor_reserva = media_despesas * (Decimal('1') + Decimal(str(percentual_seg)) / Decimal('100'))
     resultado_distribuivel = max(resultado_liquido - valor_reserva, Decimal('0.00'))
     
     # 5. Criar fechamento
