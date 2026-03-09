@@ -2168,8 +2168,8 @@ def fechamento_mensal_detail(request, pk):
     comissoes_indicador = ComissaoIndicador.objects.filter(fechamento=fechamento).select_related('parceiro', 'cliente')
     comissoes_socio = ComissaoSocio.objects.filter(fechamento=fechamento).select_related('parceiro')
     
-    total_comissoes_indicador = comissoes_indicador.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
-    total_comissoes_socio = comissoes_socio.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00')
+    total_comissoes_indicador = round(comissoes_indicador.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00'), 2)
+    total_comissoes_socio = round(comissoes_socio.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00'), 2)
     
     context = {
         'fechamento': fechamento,
@@ -2177,7 +2177,7 @@ def fechamento_mensal_detail(request, pk):
         'comissoes_socio': comissoes_socio,
         'total_comissoes_indicador': total_comissoes_indicador,
         'total_comissoes_socio': total_comissoes_socio,
-        'total_geral_comissoes': total_comissoes_indicador + total_comissoes_socio,
+        'total_geral_comissoes': round(total_comissoes_indicador + total_comissoes_socio, 2),
     }
     return render(request, 'fechamentos/detail.html', context)
 

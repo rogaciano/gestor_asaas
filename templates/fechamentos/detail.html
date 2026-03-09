@@ -94,15 +94,15 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
             <p class="text-sm text-gray-500">Comissões Indicadores</p>
-            <p class="text-lg font-medium text-green-600">R$ {{ total_comissoes_indicador }}</p>
+            <p class="text-lg font-medium text-green-600">R$ {{ total_comissoes_indicador|floatformat:2 }}</p>
         </div>
         <div>
             <p class="text-sm text-gray-500">Comissões Sócios</p>
-            <p class="text-lg font-medium text-purple-600">R$ {{ total_comissoes_socio }}</p>
+            <p class="text-lg font-medium text-purple-600">R$ {{ total_comissoes_socio|floatformat:2 }}</p>
         </div>
         <div>
             <p class="text-sm text-gray-500">Total Geral</p>
-            <p class="text-lg font-semibold text-gray-900">R$ {{ total_geral_comissoes }}</p>
+            <p class="text-lg font-semibold text-gray-900">R$ {{ total_geral_comissoes|floatformat:2 }}</p>
         </div>
     </div>
 </div>
@@ -129,9 +129,9 @@
             <tr class="hover:bg-gray-50">
                 <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ c.parceiro.nome }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ c.cliente.name }}</td>
-                <td class="px-6 py-4 text-sm text-gray-900">R$ {{ c.valor_pagamento }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">R$ {{ c.valor_pagamento|floatformat:2 }}</td>
                 <td class="px-6 py-4 text-sm text-gray-500">{{ c.percentual }}%</td>
-                <td class="px-6 py-4 text-sm font-medium text-green-600">R$ {{ c.valor_comissao }}</td>
+                <td class="px-6 py-4 text-sm font-medium text-green-600">R$ {{ c.valor_comissao|floatformat:2 }}</td>
                 <td class="px-6 py-4 text-sm">
                     {% if c.status == 'PAGO' %}
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Pago</span>
@@ -174,9 +174,9 @@
                     <i class="fas fa-times-circle text-gray-400"></i> Não
                     {% endif %}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-900">R$ {{ c.resultado_distribuivel }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">R$ {{ c.resultado_distribuivel|floatformat:2 }}</td>
                 <td class="px-6 py-4 text-sm text-gray-500">{{ c.percentual }}%</td>
-                <td class="px-6 py-4 text-sm font-medium text-purple-600">R$ {{ c.valor_comissao }}</td>
+                <td class="px-6 py-4 text-sm font-medium text-purple-600">R$ {{ c.valor_comissao|floatformat:2 }}</td>
                 <td class="px-6 py-4 text-sm">
                     {% if c.status == 'PAGO' %}
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Pago</span>
