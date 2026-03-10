@@ -64,6 +64,15 @@
             </label>
         </div>
 
+        <!-- Excluir do Fechamento -->
+        <div class="mt-4">
+            <label class="flex items-center">
+                {{ form.excluir_do_fechamento }}
+                <span class="ml-2 text-sm text-gray-700">Excluir do fechamento mensal</span>
+            </label>
+            <p class="mt-1 ml-6 text-sm text-gray-500">Movimentações desta categoria não entrarão no cálculo de receitas/despesas do fechamento (ex: retirada de sócios)</p>
+        </div>
+
         <!-- Botões -->
         <div class="mt-8 flex justify-end gap-4">
             <a href="{% url 'plano_contas_list' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
