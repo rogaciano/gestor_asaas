@@ -195,6 +195,10 @@ class PlanoContas(models.Model):
     # Informações adicionais
     descricao = models.TextField('Descrição', blank=True, null=True)
     ativa = models.BooleanField('Ativa', default=True)
+    excluir_do_fechamento = models.BooleanField(
+        'Excluir do Fechamento', default=False,
+        help_text='Marque para excluir movimentações desta categoria do cálculo do fechamento (ex: retirada de sócios)'
+    )
     
     # Controle
     created_at = models.DateTimeField('Criado em', auto_now_add=True)

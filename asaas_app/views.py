@@ -2251,10 +2251,11 @@ def _calcular_fechamento(mes, ano):
     
     config = ConfiguracaoFinanceira.get_config()
     
-    # 1. Buscar movimentações do mês
+    # 1. Buscar movimentações do mês (excluindo categorias marcadas como 'excluir do fechamento')
+    categorias_excluidas = PlanoContas.objects.filter(excluir_do_fechamento=True).values_list('id', flat=True)
     movimentacoes = Movimentacao.objects.filter(
         data__month=mes, data__year=ano, status='CONFIRMED'
-    )
+    ).exclude(plano_contas__in=categorias_excluidas)
     
     # 2. Calcular receitas e despesas
     # Receitas: valores positivos (pagamentos recebidos)
@@ -2281,7 +2282,7 @@ def _calcular_fechamento(mes, ano):
         data__lte=data_fim.date(),
         status='CONFIRMED',
         valor__lt=0
-    ).aggregate(total=Sum('valor'))['total'] or Decimal('0.00')
+    ).exclude(plano_contas__in=categorias_excluidas).aggregate(total=Sum('valor'))['total'] or Decimal('0.00')
     despesas_anteriores = abs(despesas_anteriores)
     
     media_despesas = despesas_anteriores / Decimal(str(meses_media)) if meses_media > 0 else Decimal('0.00')

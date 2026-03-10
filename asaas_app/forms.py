@@ -127,7 +127,7 @@ class PlanoContasForm(forms.ModelForm):
     
     class Meta:
         model = PlanoContas
-        fields = ['codigo', 'nome', 'tipo', 'categoria_pai', 'descricao', 'ativa']
+        fields = ['codigo', 'nome', 'tipo', 'categoria_pai', 'descricao', 'ativa', 'excluir_do_fechamento']
         widgets = {
             'codigo': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
@@ -149,6 +149,9 @@ class PlanoContasForm(forms.ModelForm):
             }),
             'ativa': forms.CheckboxInput(attrs={
                 'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+            }),
+            'excluir_do_fechamento': forms.CheckboxInput(attrs={
+                'class': 'rounded border-gray-300 text-orange-600 focus:ring-orange-500'
             }),
         }
 
