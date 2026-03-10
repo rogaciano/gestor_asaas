@@ -190,4 +190,111 @@
     </table>
 </div>
 {% endif %}
+
+<!-- Base de Cálculo - Receitas -->
+<div class="bg-white shadow rounded-lg overflow-hidden mb-8 mt-8">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center cursor-pointer" onclick="document.getElementById('receitas-table').classList.toggle('hidden')">
+        <h2 class="text-lg font-semibold text-gray-900">
+            <i class="fas fa-arrow-up text-green-500"></i> Receitas ({{ receitas|length }} movimentações)
+        </h2>
+        <span class="text-sm text-gray-500"><i class="fas fa-chevron-down"></i> Expandir/Recolher</span>
+    </div>
+    <div id="receitas-table" class="hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for m in receitas %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3 text-sm text-gray-500">{{ m.data|date:"d/m/Y" }}</td>
+                    <td class="px-6 py-3 text-sm text-gray-900">{{ m.descricao|truncatechars:60 }}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{{ m.plano_contas.nome|default:"-" }}</td>
+                    <td class="px-6 py-3 text-sm font-medium text-green-600 text-right">R$ {{ m.valor|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="bg-green-50 font-semibold">
+                    <td colspan="3" class="px-6 py-3 text-sm text-gray-900 text-right">Total Receitas</td>
+                    <td class="px-6 py-3 text-sm text-green-700 text-right">R$ {{ fechamento.total_receitas|floatformat:2 }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Base de Cálculo - Despesas -->
+<div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center cursor-pointer" onclick="document.getElementById('despesas-table').classList.toggle('hidden')">
+        <h2 class="text-lg font-semibold text-gray-900">
+            <i class="fas fa-arrow-down text-red-500"></i> Despesas ({{ despesas|length }} movimentações)
+        </h2>
+        <span class="text-sm text-gray-500"><i class="fas fa-chevron-down"></i> Expandir/Recolher</span>
+    </div>
+    <div id="despesas-table" class="hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for m in despesas %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-3 text-sm text-gray-500">{{ m.data|date:"d/m/Y" }}</td>
+                    <td class="px-6 py-3 text-sm text-gray-900">{{ m.descricao|truncatechars:60 }}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{{ m.plano_contas.nome|default:"-" }}</td>
+                    <td class="px-6 py-3 text-sm font-medium text-red-600 text-right">R$ {{ m.valor|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="bg-red-50 font-semibold">
+                    <td colspan="3" class="px-6 py-3 text-sm text-gray-900 text-right">Total Despesas</td>
+                    <td class="px-6 py-3 text-sm text-red-700 text-right">R$ {{ fechamento.total_despesas|floatformat:2 }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Movimentações Excluídas -->
+{% if movimentacoes_excluidas %}
+<div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center cursor-pointer" onclick="document.getElementById('excluidas-table').classList.toggle('hidden')">
+        <h2 class="text-lg font-semibold text-gray-900">
+            <i class="fas fa-ban text-orange-500"></i> Movimentações Excluídas do Fechamento ({{ movimentacoes_excluidas|length }})
+        </h2>
+        <span class="text-sm text-gray-500"><i class="fas fa-chevron-down"></i> Expandir/Recolher</span>
+    </div>
+    <div id="excluidas-table" class="hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for m in movimentacoes_excluidas %}
+                <tr class="hover:bg-gray-50 bg-orange-50">
+                    <td class="px-6 py-3 text-sm text-gray-500">{{ m.data|date:"d/m/Y" }}</td>
+                    <td class="px-6 py-3 text-sm text-gray-900">{{ m.descricao|truncatechars:60 }}</td>
+                    <td class="px-6 py-3 text-sm text-orange-600">{{ m.plano_contas.nome|default:"-" }}</td>
+                    <td class="px-6 py-3 text-sm font-medium text-orange-600 text-right">R$ {{ m.valor|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

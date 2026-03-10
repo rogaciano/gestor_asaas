@@ -2171,6 +2171,20 @@ def fechamento_mensal_detail(request, pk):
     total_comissoes_indicador = round(comissoes_indicador.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00'), 2)
     total_comissoes_socio = round(comissoes_socio.aggregate(total=Sum('valor_comissao'))['total'] or Decimal('0.00'), 2)
     
+    # Movimentações base do fechamento (para conferência)
+    categorias_excluidas = PlanoContas.objects.filter(excluir_do_fechamento=True).values_list('id', flat=True)
+    movimentacoes = Movimentacao.objects.filter(
+        data__month=fechamento.mes, data__year=fechamento.ano, status='CONFIRMED'
+    ).exclude(plano_contas__in=categorias_excluidas).select_related('plano_contas', 'cliente').order_by('-data')
+    
+    movimentacoes_excluidas = Movimentacao.objects.filter(
+        data__month=fechamento.mes, data__year=fechamento.ano, status='CONFIRMED',
+        plano_contas__in=categorias_excluidas
+    ).select_related('plano_contas', 'cliente').order_by('-data')
+    
+    receitas = movimentacoes.filter(valor__gt=0)
+    despesas = movimentacoes.filter(valor__lt=0)
+    
     context = {
         'fechamento': fechamento,
         'comissoes_indicador': comissoes_indicador,
@@ -2178,6 +2192,9 @@ def fechamento_mensal_detail(request, pk):
         'total_comissoes_indicador': total_comissoes_indicador,
         'total_comissoes_socio': total_comissoes_socio,
         'total_geral_comissoes': round(total_comissoes_indicador + total_comissoes_socio, 2),
+        'receitas': receitas,
+        'despesas': despesas,
+        'movimentacoes_excluidas': movimentacoes_excluidas,
     }
     return render(request, 'fechamentos/detail.html', context)
 
